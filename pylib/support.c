@@ -9,10 +9,13 @@ int Pygfried_PyArg_ParseTuple_U(PyObject* args, PyObject** s) {
     return PyArg_ParseTuple(args, "U", s);
 }
 
-/* Go cannot access C macros */
+/* Go cannot access C macros. */
 PyObject* Pygfried_Py_RETURN_NONE() {
     Py_RETURN_NONE;
 }
+
+/* Exception types. */
+PyObject* Pygfried_GoError;
 
 static struct PyMethodDef methods[] = {
     {"identify", (PyCFunction)identify, METH_VARARGS},
@@ -21,7 +24,10 @@ static struct PyMethodDef methods[] = {
 };
 
 static PyObject* _setup_module(PyObject* module) {
-    if (module) { /* ... */ }
+    if (module) {
+        Pygfried_GoError = PyErr_NewException("pygfried.GoError", PyExc_OSError, NULL);
+        PyModule_AddObject(module, "GoError", Pygfried_GoError);
+    }
     return module;
 }
 

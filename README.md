@@ -6,4 +6,4 @@ tool written in Go.
 No animals were harmed in the making of this extension.
 
 
-[siegfried]: https://www.itforarchivists.com/siegfried
+[sigfried]: https://www.itforarchivists.com/siegfried

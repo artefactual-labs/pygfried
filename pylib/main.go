@@ -4,6 +4,7 @@ package main
 // #include <Python.h>
 // extern int Pygfried_PyArg_ParseTuple_U(PyObject*, PyObject**);
 // extern PyObject* Pygfried_Py_RETURN_NONE();
+// extern PyObject* Pygfried_GoError;
 import "C"
 
 import (
@@ -14,7 +15,11 @@ import (
 )
 
 func raise(err error) *C.PyObject {
-	panic(err)
+	tp := C.Pygfried_GoError
+	cstr := C.CString(err.Error())
+	C.PyErr_SetString(tp, cstr)
+	C.free(unsafe.Pointer(cstr))
+	return nil
 }
 
 func stringToPy(s string) *C.PyObject {
