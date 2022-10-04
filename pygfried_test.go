@@ -11,24 +11,24 @@ import (
 )
 
 func TestIdentify(t *testing.T) {
-	result, err := pygfried.Identify("default.sig")
+	result, err := pygfried.Identify("setup.cfg")
 
 	assert.NilError(t, err)
 	assert.DeepEqual(t, result, &pygfried.Result{
-		Path:        "default.sig",
-		Identifiers: []string{"fmt/883"},
-		Known:       true,
+		Path:        "setup.cfg",
+		Identifiers: []string{"UNKNOWN"},
+		Known:       false,
 	})
 }
 
 func TestIdentifyAll(t *testing.T) {
-	paths := []string{"README.md", "default.sig"}
+	paths := []string{"README.md", "setup.cfg"}
 	results, err := pygfried.IdentifyAll(paths)
 
 	assert.NilError(t, err)
 	assert.DeepEqual(t, results, []*pygfried.Result{
 		{Path: "README.md", Identifiers: []string{"fmt/1149"}, Known: true},
-		{Path: "default.sig", Identifiers: []string{"fmt/883"}, Known: true},
+		{Path: "setup.cfg", Identifiers: []string{"UNKNOWN"}, Known: false},
 	})
 }
 

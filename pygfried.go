@@ -1,9 +1,6 @@
 package pygfried
 
 import (
-	"bytes"
-	"compress/flate"
-	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,27 +8,19 @@ import (
 	"github.com/richardlehane/siegfried"
 	"github.com/richardlehane/siegfried/pkg/config"
 	"github.com/richardlehane/siegfried/pkg/core"
+	"github.com/richardlehane/siegfried/pkg/static"
 )
-
-//go:embed default.sig
-var signatureFile []byte
 
 var sf *siegfried.Siegfried
 
-func load() (*siegfried.Siegfried, error) {
+func load() *siegfried.Siegfried {
 	if sf != nil {
-		return sf, nil
+		return sf
 	}
-	offset := len(config.Magic()) + 2
-	r := bytes.NewBuffer(signatureFile[offset:])
-	rc := flate.NewReader(r)
-	defer rc.Close()
-	s, err := siegfried.LoadReader(rc)
-	if err != nil {
-		return nil, err
-	}
-	sf = s
-	return sf, err
+
+	sf = static.New()
+
+	return sf
 }
 
 func identify(sf *siegfried.Siegfried, path string) ([]core.Identification, error) {
@@ -67,10 +56,7 @@ func buildResult(path string, ids []core.Identification, err error) *Result {
 }
 
 func Identify(path string) (*Result, error) {
-	sf, err := load()
-	if err != nil {
-		return nil, err
-	}
+	sf := load()
 
 	ids, err := identify(sf, path)
 	if err != nil {
@@ -82,10 +68,7 @@ func Identify(path string) (*Result, error) {
 }
 
 func IdentifyAll(paths []string) ([]*Result, error) {
-	sf, err := load()
-	if err != nil {
-		return nil, err
-	}
+	sf := load()
 
 	rs := make([]*Result, len(paths))
 	for idx, path := range paths {
