@@ -4,4 +4,4 @@ import pygfried
 
 
 def test_version():
-    assert pygfried.version == "1.9.1"
+    assert pygfried.version() == "1.9.5"
