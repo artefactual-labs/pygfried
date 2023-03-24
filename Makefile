@@ -11,6 +11,6 @@ clean:
 	rm -fr .pytest_cache
 
 release-linux: clean
-	setuptools-golang-build-manylinux-wheels --golang="1.19.1" --pythons="cp37-cp37m cp38-cp38 cp39-cp39"
+	setuptools-golang-build-manylinux-wheels --golang="1.20.2" --pythons="cp37-cp37m cp38-cp38 cp39-cp39"
 	python setup.py sdist
 	twine upload dist/*

@@ -3,8 +3,8 @@ module github.com/artefactual-labs/pygfried
 go 1.17
 
 require (
-	github.com/richardlehane/siegfried v1.9.5
-	gotest.tools/v3 v3.3.0
+	github.com/richardlehane/siegfried v1.9.6
+	gotest.tools/v3 v3.4.0
 )
 
 require (
