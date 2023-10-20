@@ -31,3 +31,4 @@ setup(
     packages=['pygfried'],
     package_data={'pygfried': ['py.typed', '__init__.pyi']},
 )
+
