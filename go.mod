@@ -1,14 +1,14 @@
 module github.com/artefactual-labs/pygfried
 
-go 1.17
+go 1.21
 
 require (
-	github.com/richardlehane/siegfried v1.10.0
-	gotest.tools/v3 v3.4.0
+	github.com/richardlehane/siegfried v1.10.1
+	gotest.tools/v3 v3.5.1
 )
 
 require (
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/richardlehane/characterize v1.0.0 // indirect
 	github.com/richardlehane/match v1.0.5 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
