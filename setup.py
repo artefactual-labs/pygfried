@@ -28,4 +28,6 @@ setup(
     ],
     cmdclass=cmdclass,
     build_golang={'root': 'github.com/artefactual-labs/pygfried'},
+    packages=['pygfried'],
+    package_data={'pygfried': ['py.typed', '__init__.pyi']},
 )
