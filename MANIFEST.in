@@ -1,3 +1,2 @@
 include go.mod
-include default.sig
 global-include *.c *.go
