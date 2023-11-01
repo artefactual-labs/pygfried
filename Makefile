@@ -14,4 +14,4 @@ release-linux: clean
 	setuptools-golang-build-manylinux-wheels --golang="1.21.3" --pythons="cp38-cp38 cp39-cp39"
 	python setup.py sdist
 	twine check dist/*
-	twine upload dist/* -r pypi
+	twine upload dist/* -r pygfried
