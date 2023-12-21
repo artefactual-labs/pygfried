@@ -26,7 +26,6 @@ legacy_tox_ini = """
       twine
     commands =
       rm -rf {toxinidir}/build {toxinidir}/dist {toxinidir}/.eggs
-      python -m build --sdist
       find . -name '*.egg-info' -exec rm -rf {} +
       find . -name '*.egg' -exec rm -rf {} +
       find . -name '*.pyc' -exec rm -f {} +
@@ -35,6 +34,7 @@ legacy_tox_ini = """
       find . -name '__pycache__' -exec rm -fr {} +
       rm -fr .pytest_cache
       setuptools-golang-build-manylinux-wheels --golang="1.21.5" --pythons="cp38-cp38 cp39-cp39"
+      python -m build --sdist
       twine check --strict {toxinidir}/dist/*
       twine upload {toxinidir}/dist/* -r pygfried
 """
