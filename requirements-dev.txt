@@ -1,3 +1,5 @@
+build
+coverage
 pytest
 twine
-setuptools-golang~=2.7
+setuptools-golang~=2.9
