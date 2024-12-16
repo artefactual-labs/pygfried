@@ -12,7 +12,4 @@ coverage.*
 
 .cache
 .pytest_cache
-
-.tox/
-
 .mypy_cache
