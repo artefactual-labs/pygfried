@@ -2,4 +2,4 @@ build
 coverage
 pytest
 twine
-setuptools-golang~=2.9
+setuptools-golang
