@@ -1,6 +1,11 @@
-from typing import Literal
-from typing import Union
+from typing import Union, Literal, Any
 
 class GoError: ...
-def identify(path: str) -> Union[Literal["UNKNOWN"], str, None]: ...
+
+SimpleIdentifyResult = Union[Literal["UNKNOWN"], str, None]
+DetailedIdentifyResult = Any
+
+def identify(
+    path: str, detailed: bool = False
+) -> Union[SimpleIdentifyResult, DetailedIdentifyResult]: ...
 def version() -> str: ...

@@ -5,6 +5,7 @@ package main
 // extern int Pygfried_PyArg_ParseTuple_U(PyObject*, PyObject**);
 // extern PyObject* Pygfried_Py_RETURN_NONE();
 // extern PyObject* Pygfried_GoError;
+// extern PyObject* Pygfried_json_loads(PyObject*);
 import "C"
 
 import (
@@ -65,6 +66,31 @@ func identify(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	}
 
 	return stringToPyOrNone(res.Identifiers[0])
+}
+
+//export identify_with_json
+func identify_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
+	path, err := goStringFromArgs(args)
+	if err != nil {
+		return raise(err)
+	}
+
+	jsonResult, err := pygfried.IdentifyWithJSON(path)
+	if err != nil {
+		return raise(err)
+	}
+
+	// Convert Go string to Python string
+	pyStr := stringToPy(jsonResult)
+	if pyStr == nil {
+		return raise(fmt.Errorf("Failed to convert string to Python object"))
+	}
+
+	// Parse JSON string into Python object using C function
+	result := C.Pygfried_json_loads(pyStr)
+	C.Py_DecRef(pyStr)
+
+	return result
 }
 
 //export version
