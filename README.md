@@ -20,6 +20,8 @@ $ python -q
 '1.11.2'
 >>> pygfried.identify("/bin/ls")
 'fmt/690'
+>>> pygfried.identify("/bin/ls", detailed=True)
+{'siegfried': '1.11.2', 'scandate': '2025-06-09T20:43:28+02:00', 'signature': 'default.sig', 'created': '2025-03-01T15:28:08+11:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V120.xml; container-signature-20240715.xml'}], 'files': [{'filename': '/bin/ls', 'filesize': 142312, 'modified': '2024-04-05T16:36:57+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/690', 'format': 'Executable and Linkable Format', 'version': '64bit Little Endian', 'mime': '', 'class': '', 'basis': 'byte match at 0, 7', 'warning': 'extension mismatch'}]}]}
 ```
 
 ## Limitations

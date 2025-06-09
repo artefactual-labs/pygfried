@@ -1,14 +1,18 @@
 package pygfried
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/richardlehane/siegfried"
 	"github.com/richardlehane/siegfried/pkg/config"
 	"github.com/richardlehane/siegfried/pkg/core"
 	"github.com/richardlehane/siegfried/pkg/static"
+	"github.com/richardlehane/siegfried/pkg/writer"
 )
 
 var sf *siegfried.Siegfried
@@ -67,6 +71,10 @@ func Identify(path string) (*Result, error) {
 	return r, err
 }
 
+func IdentifyWithJSON(path string) (string, error) {
+	return IdentifyAllWithJSON([]string{path})
+}
+
 func IdentifyAll(paths []string) ([]*Result, error) {
 	sf := load()
 
@@ -77,6 +85,31 @@ func IdentifyAll(paths []string) ([]*Result, error) {
 	}
 
 	return rs, nil
+}
+
+func IdentifyAllWithJSON(paths []string) (string, error) {
+	sf := load()
+
+	var buf bytes.Buffer
+	w := writer.JSON(&buf)
+
+	w.Head(config.SignatureBase(), time.Now(), sf.C, config.Version(), sf.Identifiers(), sf.Fields(), "")
+
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		var mod time.Time
+		var size int64
+		if err == nil {
+			mod = info.ModTime()
+			size = info.Size()
+		}
+		ids, identifyErr := identify(sf, path)
+		w.File(path, size, mod.Format(time.RFC3339), nil, identifyErr, ids)
+	}
+
+	w.Tail()
+
+	return strings.TrimSpace(buf.String()), nil
 }
 
 func Version() string {
