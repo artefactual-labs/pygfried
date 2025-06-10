@@ -1,5 +1,0 @@
-build
-coverage
-pytest
-twine
-setuptools-golang

@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pygfried"
+dynamic = ["version"]
+description = "Siegfried as a Python extension"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [
+  { name = "Artefactual Systems Inc.", email = "info@artefactual.com" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.8",
+  "mypy>=1.0",
+  "hatchling>=1.27.0",
+  "hatch-vcs>=0.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/artefactual-labs/pygfried"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pygfried"]
+
+[tool.hatch.build]
+include = [
+  "pygfried",
+  "pylib",
+  "go.mod",
+  "go.sum",
+  "pygfried.go",
+  "pygfried_test.go",
+  "build.py",
+]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+module = "github.com/artefactual-labs/pygfried"
