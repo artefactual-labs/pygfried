@@ -4,9 +4,13 @@
 
 pygfried is a CPython extension that brings [siegfried] - a powerful,
 signature-based file format identification tool written in Go - into the Python
-ecosystem. Instead of reimplementing siegfried's logic, pygfried embeds the
-original Go code directly, making core siegfried functionality available to
-Python users without any changes to the underlying detection engine.
+ecosystem.
+
+![Identifying a file with pygfried](./example.png)
+
+Instead of reimplementing siegfried's logic, pygfried embeds the original Go
+code directly, making core siegfried functionality available to Python users
+without any changes to the underlying detection engine.
 
 No animals were harmed in the making of this extension.
 
@@ -18,10 +22,10 @@ $ python -q
 >>> import pygfried
 >>> pygfried.version()
 '1.11.2'
->>> pygfried.identify("/bin/ls")
-'fmt/690'
->>> pygfried.identify("/bin/ls", detailed=True)
-{'siegfried': '1.11.2', 'scandate': '2025-06-09T20:43:28+02:00', 'signature': 'default.sig', 'created': '2025-03-01T15:28:08+11:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V120.xml; container-signature-20240715.xml'}], 'files': [{'filename': '/bin/ls', 'filesize': 142312, 'modified': '2024-04-05T16:36:57+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/690', 'format': 'Executable and Linkable Format', 'version': '64bit Little Endian', 'mime': '', 'class': '', 'basis': 'byte match at 0, 7', 'warning': 'extension mismatch'}]}]}
+>>> pygfried.identify("example.png")
+'fmt/11'
+>>> pygfried.identify("example.png", detailed=True)
+{'siegfried': '1.11.2', 'scandate': '2025-06-10T07:16:31+02:00', 'signature': 'default.sig', 'created': '2025-03-01T15:28:08+11:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V120.xml; container-signature-20240715.xml'}], 'files': [{'filename': 'example.png', 'filesize': 237675, 'modified': '2025-06-10T07:11:26+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/11', 'format': 'Portable Network Graphics', 'version': '1.0', 'mime': 'image/png', 'class': 'Image (Raster)', 'basis': 'extension match png; byte match at [[0 16] [237663 12]]', 'warning': ''}]}]}
 ```
 
 ## Limitations
@@ -55,5 +59,13 @@ another Python library that also uses a Go extension (built with the same
 c-shared mechanism) in the same process. If you're just using pygfried on its
 own, you don't need to worry - everything should work as expected.
 
+## Credits
+
+pygfried is powered by the original [siegfried] project, which is distributed
+under the Apache License, Version 2.0. All core file format identification logic
+and signatures are provided by siegfried. We gratefully acknowledge the work of
+the siegfried project and its contributors.
+
 [siegfried]: https://www.itforarchivists.com/siegfried
 [unsupported]: https://github.com/golang/go/issues/65050
+
