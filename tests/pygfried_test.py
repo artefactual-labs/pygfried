@@ -25,7 +25,7 @@ def test_identify_detailed(siegfried_version):
     assert len(result["identifiers"]) > 0
     assert len(result["files"]) == 1
 
-    finfo = result["files"][0]
+    finfo = dict(result["files"][0])
     parse_iso_date(str(finfo.pop("modified")))
     assert finfo == {
         "filename": str(conftest_path),
