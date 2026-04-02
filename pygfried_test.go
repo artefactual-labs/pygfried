@@ -12,18 +12,18 @@ import (
 )
 
 func TestIdentify(t *testing.T) {
-	result, err := pygfried.Identify("setup.cfg")
+	result, err := pygfried.Identify("pyproject.toml")
 
 	assert.NilError(t, err)
 	assert.DeepEqual(t, result, &pygfried.Result{
-		Path:        "setup.cfg",
-		Identifiers: []string{"UNKNOWN"},
-		Known:       false,
+		Path:        "pyproject.toml",
+		Identifiers: []string{"fmt/2065"},
+		Known:       true,
 	})
 }
 
 func TestIdentifyWithJSON(t *testing.T) {
-	blob, err := pygfried.IdentifyWithJSON("setup.cfg")
+	blob, err := pygfried.IdentifyWithJSON("pyproject.toml")
 
 	assert.NilError(t, err)
 
@@ -46,26 +46,26 @@ func TestIdentifyWithJSON(t *testing.T) {
 	assert.DeepEqual(t, response, Response{
 		Files: []File{
 			{
-				Filename: "setup.cfg",
-				Matches:  []Match{{ID: "UNKNOWN"}},
+				Filename: "pyproject.toml",
+				Matches:  []Match{{ID: "fmt/2065"}},
 			},
 		},
 	})
 }
 
 func TestIdentifyAll(t *testing.T) {
-	paths := []string{"README.md", "setup.cfg"}
+	paths := []string{"README.md", "pyproject.toml"}
 	results, err := pygfried.IdentifyAll(paths)
 
 	assert.NilError(t, err)
 	assert.DeepEqual(t, results, []*pygfried.Result{
 		{Path: "README.md", Identifiers: []string{"fmt/1149"}, Known: true},
-		{Path: "setup.cfg", Identifiers: []string{"UNKNOWN"}, Known: false},
+		{Path: "pyproject.toml", Identifiers: []string{"fmt/2065"}, Known: true},
 	})
 }
 
 func TestIdentifyAllWithJSON(t *testing.T) {
-	paths := []string{"README.md", "setup.cfg"}
+	paths := []string{"README.md", "pyproject.toml"}
 	blob, err := pygfried.IdentifyAllWithJSON(paths)
 
 	assert.NilError(t, err)
@@ -93,8 +93,8 @@ func TestIdentifyAllWithJSON(t *testing.T) {
 				Matches:  []Match{{ID: "fmt/1149"}},
 			},
 			{
-				Filename: "setup.cfg",
-				Matches:  []Match{{ID: "UNKNOWN"}},
+				Filename: "pyproject.toml",
+				Matches:  []Match{{ID: "fmt/2065"}},
 			},
 		},
 	})

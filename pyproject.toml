@@ -1,7 +1,60 @@
+[build-system]
+requires = [
+    "setuptools",
+    "setuptools-golang~=2.9",
+    "setuptools-scm",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pygfried"
+description = "Siegfried as a Python extension"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Artefactual Systems Inc.", email = "info@artefactual.com" },
+]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/artefactual-labs/pygfried"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[dependency-groups]
+dev = [
+    "build",
+    "coverage",
+    "pytest",
+    "ruff",
+    "setuptools-golang",
+    "twine",
+]
+
+[tool.setuptools]
+packages = ["pygfried"]
+
+[tool.setuptools.package-data]
+pygfried = ["py.typed", "__init__.pyi"]
+
 [tool.setuptools_scm]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["B", "C4", "E", "F", "I", "UP", "W"]

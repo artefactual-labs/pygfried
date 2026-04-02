@@ -1,6 +1,7 @@
 .venv
 *.py[co]
 *.mo
+*.so
 
 /*.egg-info
 /build
