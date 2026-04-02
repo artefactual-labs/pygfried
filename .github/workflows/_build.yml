@@ -1,0 +1,199 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to build and test.
+        required: true
+        type: string
+      package_version:
+        description: Exact PEP 440 version to inject during the build.
+        required: false
+        default: ""
+        type: string
+      upload_artifacts:
+        description: Upload built distributions as workflow artifacts.
+        required: false
+        default: false
+        type: boolean
+
+env:
+  # Fail if uv.lock would need to change.
+  UV_LOCKED: "1"
+  # Use the Python provided by actions/setup-python from PATH.
+  UV_SYSTEM_PYTHON: "1"
+
+jobs:
+  lint:
+    name: Lint and format checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Sync dev dependencies
+        run: uv sync --only-dev --no-install-project
+      - name: Run checks
+        run: |
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
+
+  sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+    env:
+      PRETEND_VERSION: ${{ inputs.package_version }}
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Sync dev dependencies
+        run: uv sync --only-dev --no-install-project
+      - name: Build sdist
+        shell: bash
+        run: |
+          if [[ -n "${PRETEND_VERSION}" ]]; then
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${PRETEND_VERSION}"
+          fi
+          uv build --sdist
+      - name: Check sdist
+        run: uv run --no-sync python -m twine check --strict dist/*.tar.gz
+      - name: Upload sdist artifact
+        if: inputs.upload_artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: python-sdist
+          path: dist/*.tar.gz
+
+  build:
+    name: Build ${{ matrix.os }} (py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    needs: lint
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.10"
+          # TODO: Investigate Windows abi3 wheels; until then we need one
+          # build per supported Python minor version on Windows.
+          - os: windows-latest
+            python-version: "3.10"
+          - os: windows-latest
+            python-version: "3.11"
+          - os: windows-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.13"
+          - os: windows-latest
+            python-version: "3.14"
+    env:
+      PRETEND_VERSION: ${{ inputs.package_version }}
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Linux installs Go inside the manylinux container; macOS and Windows
+      # build on the host runner and need Go provisioned here.
+      - name: Set up Go
+        if: matrix.os != 'ubuntu-latest'
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Sync dev dependencies
+        run: uv sync --only-dev --no-install-project
+      - name: Build wheel (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          GO_VERSION="$(awk '/^go / { print $2; exit }' go.mod)"
+          DOCKER_ENV=()
+          if [[ -n "${PRETEND_VERSION}" ]]; then
+            DOCKER_ENV+=(--env "SETUPTOOLS_SCM_PRETEND_VERSION=${PRETEND_VERSION}")
+          fi
+          docker run --rm \
+            --volume "${PWD}:/src:ro" \
+            --volume "${PWD}/dist:/dist:rw" \
+            --user "$(id -u):$(id -g)" \
+            "${DOCKER_ENV[@]}" \
+            quay.io/pypa/manylinux2014_x86_64:latest \
+            bash -o pipefail -euxc '
+              cp -a /src/. /tmp/src
+              cd /tmp
+              curl --silent --location "https://go.dev/dl/go'"${GO_VERSION}"'.linux-amd64.tar.gz" | tar -xz
+              export PATH="/tmp/go/bin:$PATH" HOME=/tmp GOCACHE=/tmp/go-cache
+              /opt/python/cp310-cp310/bin/pip wheel --no-deps --wheel-dir /tmp /tmp/src
+              auditwheel repair /tmp/*.whl --wheel-dir /dist
+            '
+          uv run --no-sync python -m twine check --strict dist/*.whl
+      - name: Build wheel (macOS/Windows)
+        if: matrix.os != 'ubuntu-latest'
+        shell: bash
+        run: |
+          if [[ -n "${PRETEND_VERSION}" ]]; then
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${PRETEND_VERSION}"
+          fi
+          # Use the matrix interpreter for the isolated build environment.
+          # Windows wheels are not abi3 yet, so each Python minor needs its
+          # own matching wheel tag.
+          uv build --wheel --python "${{ matrix.python-version }}"
+          uv run --no-sync python -m twine check --strict dist/*.whl
+      - name: Test wheel installation (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $wheels = Get-ChildItem dist/*.whl
+          python -m venv test_env
+          .\\test_env\\Scripts\\Activate.ps1
+          python -m pip install pytest
+          python -m pip install $wheels[0].FullName
+          python -m pytest
+          deactivate
+      - name: Test wheel installation (macOS/Linux)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          python -m venv test_env
+          source test_env/bin/activate
+          python -m pip install pytest
+          python -m pip install dist/*.whl
+          python -m pytest
+          deactivate
+      - name: Upload package artifacts
+        if: inputs.upload_artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: python-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: dist/*.whl
