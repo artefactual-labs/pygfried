@@ -1,7 +1,6 @@
 [build-system]
 requires = [
     "setuptools",
-    "setuptools-golang~=2.9",
     "setuptools-scm",
 ]
 build-backend = "setuptools.build_meta"
@@ -41,7 +40,6 @@ dev = [
     "coverage",
     "pytest",
     "ruff",
-    "setuptools-golang",
     "twine",
 ]
 
