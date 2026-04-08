@@ -59,6 +59,21 @@ Check artifacts:
 uv run python -m twine check --strict dist/*
 ```
 
+Smoke test an installed package or built wheel the way a user would:
+
+```bash
+./.github/scripts/smoke-install.sh
+./.github/scripts/smoke-install.sh dist/pygfried-*.whl
+./.github/scripts/smoke-install.sh dist/pygfried-*.whl 3.14
+```
+
+The smoke test defaults to the interpreter version in `.python-version`,
+installs `pygfried` via `uvx`, runs `identify("README.md", detailed=True)`,
+prints the result, and asserts a few stable fields. This is most useful as a
+quick pre-release or post-release sanity check in addition to the normal test
+suite. Pass an explicit Python version when you need to test a wheel that is
+specific to a Python minor version.
+
 ## Dependency management
 
 When upgrading Python, Go, or CI inputs, update the files that define support

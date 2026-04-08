@@ -191,6 +191,9 @@ jobs:
           python -m pip install dist/*.whl
           python -m pytest
           deactivate
+      - name: Smoke test wheel with uvx
+        shell: bash
+        run: ./.github/scripts/smoke-install.sh dist/*.whl "${{ matrix.python-version }}"
       - name: Upload package artifacts
         if: inputs.upload_artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
