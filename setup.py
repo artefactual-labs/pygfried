@@ -10,6 +10,32 @@ from setuptools import Extension
 from setuptools import setup
 from setuptools.command.build_ext import build_ext as _build_ext
 
+REPO_ROOT = Path(__file__).resolve().parent
+
+
+def read_minimum_python_version() -> tuple[int, int]:
+    version_text = (REPO_ROOT / ".python-version").read_text().strip()
+    version = version_text.split(".", 1)
+    if len(version) != 2:
+        raise OSError(
+            "Expected .python-version to contain a major.minor version, "
+            f"got: {version_text!r}",
+        )
+
+    major, minor = (int(part) for part in version)
+    if major != 3:
+        raise OSError(
+            "Expected .python-version to declare a Python 3 interpreter, "
+            f"got: {version_text!r}",
+        )
+
+    return major, minor
+
+
+MINIMUM_PYTHON_MAJOR, MINIMUM_PYTHON_MINOR = read_minimum_python_version()
+MINIMUM_PY_LIMITED_API = f"0x{MINIMUM_PYTHON_MAJOR:02X}{MINIMUM_PYTHON_MINOR:02X}0000"
+MINIMUM_WHEEL_PY_LIMITED_API = f"cp3{MINIMUM_PYTHON_MINOR}"
+
 
 def format_cgo_cflags(
     include_dirs: list[str],
@@ -29,8 +55,10 @@ def platform_ldflags() -> str:
         return "-Wl,-undefined,dynamic_lookup"
     if sys.platform == "win32":
         libs_dir = Path(sys.base_prefix) / "libs"
-        version = f"{sys.version_info[0]}{sys.version_info[1]}"
-        return f"-L{libs_dir} -lpython{version}"
+        stable_abi_lib = libs_dir / "python3.lib"
+        if not stable_abi_lib.exists():
+            raise OSError(f"Stable ABI import library not found: {stable_abi_lib}")
+        return f"-L{libs_dir} -lpython3"
     return "-Wl,--unresolved-symbols=ignore-all"
 
 
@@ -89,7 +117,7 @@ class build_ext(_build_ext):
         subprocess.run(cmd, cwd=main_file.parent, env=env, check=True)
 
 
-if sys.platform != "win32" and platform.python_implementation() == "CPython":
+if platform.python_implementation() == "CPython":
     try:
         from setuptools.command.bdist_wheel import bdist_wheel as _bdist_wheel
     except ImportError:
@@ -98,7 +126,7 @@ if sys.platform != "win32" and platform.python_implementation() == "CPython":
 
         class bdist_wheel(_bdist_wheel):
             def finalize_options(self) -> None:
-                self.py_limited_api = f"cp3{sys.version_info[1]}"
+                self.py_limited_api = MINIMUM_WHEEL_PY_LIMITED_API
                 super().finalize_options()
 
         cmdclass = {"bdist_wheel": bdist_wheel}
@@ -113,7 +141,7 @@ setup(
             "pygfried",
             ["pylib/main.go"],
             py_limited_api=True,
-            define_macros=[("Py_LIMITED_API", None)],
+            define_macros=[("Py_LIMITED_API", MINIMUM_PY_LIMITED_API)],
         ),
     ],
     cmdclass=cmdclass,
