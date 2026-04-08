@@ -579,7 +579,6 @@ dev = [
     { name = "coverage" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "setuptools-golang" },
     { name = "twine" },
 ]
 
@@ -593,7 +592,6 @@ dev = [
     { name = "coverage" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "setuptools-golang" },
     { name = "twine" },
 ]
 
@@ -741,27 +739,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/46/f5af3402b579fd5e11573ce652019a67074317e18c1935cc0b4ba9b35552/secretstorage-3.5.0-py3-none-any.whl", hash = "sha256:0ce65888c0725fcb2c5bc0fdb8e5438eece02c523557ea40ce0703c266248137", size = 15554, upload-time = "2025-11-23T19:02:51.545Z" },
-]
-
-[[package]]
-name = "setuptools"
-version = "82.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4f/db/cfac1baf10650ab4d1c111714410d2fbb77ac5a616db26775db562c8fab2/setuptools-82.0.1.tar.gz", hash = "sha256:7d872682c5d01cfde07da7bccc7b65469d3dca203318515ada1de5eda35efbf9", size = 1152316, upload-time = "2026-03-09T12:47:17.221Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl", hash = "sha256:a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb", size = 1006223, upload-time = "2026-03-09T12:47:15.026Z" },
-]
-
-[[package]]
-name = "setuptools-golang"
-version = "2.9.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/83/60/aa914100664431d13f1480c630cf8cd8ea77d3d24022a58d45fa32de9e03/setuptools_golang-2.9.0.tar.gz", hash = "sha256:0f6996488ed254bba01e678eae1ff68fe20688785d8a42f0faad4361c316552b", size = 6772, upload-time = "2023-07-29T20:05:32.054Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/b5/cec02fe020136e92344fdb34718bdf673aa5446cff94440ced5159fce6fc/setuptools_golang-2.9.0-py2.py3-none-any.whl", hash = "sha256:97ccf706a7bb21d5a5b24ec4920af103df1558253243cbd8731d563d350b0f76", size = 7232, upload-time = "2023-07-29T20:05:30.982Z" },
 ]
 
 [[package]]
