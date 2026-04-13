@@ -84,8 +84,8 @@ jobs:
           path: dist/*.tar.gz
 
   build:
-    name: Build ${{ matrix.os }} (py${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.name }} (py${{ matrix.python-version }})
+    runs-on: ${{ matrix.runner }}
     needs: lint
     permissions:
       contents: read
@@ -93,14 +93,41 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - name: linux-x86_64
+            platform: linux
+            runner: ubuntu-24.04
             python-version: "3.10"
-          - os: macos-latest
+            manylinux_image: quay.io/pypa/manylinux2014_x86_64:latest
+            go_tarball: linux-amd64
+            artifact_name: python-wheel-linux-x86_64-py3.10
+            macosx_deployment_target: ""
+          - name: linux-aarch64
+            platform: linux
+            runner: ubuntu-24.04-arm
             python-version: "3.10"
-          - os: windows-latest
+            manylinux_image: quay.io/pypa/manylinux2014_aarch64:latest
+            go_tarball: linux-arm64
+            artifact_name: python-wheel-linux-aarch64-py3.10
+            macosx_deployment_target: ""
+          - name: macos-arm64
+            platform: macos
+            runner: macos-14
             python-version: "3.10"
+            manylinux_image: ""
+            go_tarball: ""
+            artifact_name: python-wheel-macos-arm64-py3.10
+            macosx_deployment_target: "11.0"
+          - name: windows-x86_64
+            platform: windows
+            runner: windows-latest
+            python-version: "3.10"
+            manylinux_image: ""
+            go_tarball: ""
+            artifact_name: python-wheel-windows-x86_64-py3.10
+            macosx_deployment_target: ""
     env:
       PRETEND_VERSION: ${{ inputs.package_version }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
     steps:
       - name: Check out source code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -116,14 +143,14 @@ jobs:
       # Linux installs Go inside the manylinux container; macOS and Windows
       # build on the host runner and need Go provisioned here.
       - name: Set up Go
-        if: matrix.os != 'ubuntu-latest'
+        if: matrix.platform != 'linux'
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
       - name: Sync dev dependencies
         run: uv sync --only-dev --no-install-project
       - name: Build wheel (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.platform == 'linux'
         shell: bash
         run: |
           rm -rf dist
@@ -138,18 +165,18 @@ jobs:
             --volume "${PWD}/dist:/dist:rw" \
             --user "$(id -u):$(id -g)" \
             "${DOCKER_ENV[@]}" \
-            quay.io/pypa/manylinux2014_x86_64:latest \
+            "${{ matrix.manylinux_image }}" \
             bash -o pipefail -euxc '
               cp -a /src/. /tmp/src
               cd /tmp
-              curl --silent --location "https://go.dev/dl/go'"${GO_VERSION}"'.linux-amd64.tar.gz" | tar -xz
+              curl --silent --location "https://go.dev/dl/go'"${GO_VERSION}"'.${{ matrix.go_tarball }}.tar.gz" | tar -xz
               export PATH="/tmp/go/bin:$PATH" HOME=/tmp GOCACHE=/tmp/go-cache
               /opt/python/cp310-cp310/bin/pip wheel --no-deps --wheel-dir /tmp /tmp/src
               auditwheel repair /tmp/*.whl --wheel-dir /dist
             '
           uv run --no-sync python -m twine check --strict dist/*.whl
       - name: Build wheel (macOS/Windows)
-        if: matrix.os != 'ubuntu-latest'
+        if: matrix.platform != 'linux'
         shell: bash
         run: |
           if [[ -n "${PRETEND_VERSION}" ]]; then
@@ -159,7 +186,7 @@ jobs:
           uv build --wheel --python "${{ matrix.python-version }}"
           uv run --no-sync python -m twine check --strict dist/*.whl
       - name: Test wheel installation (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.platform == 'windows'
         shell: pwsh
         run: |
           $wheels = Get-ChildItem dist/*.whl
@@ -170,7 +197,7 @@ jobs:
           python -m pytest
           deactivate
       - name: Test wheel installation (macOS/Linux)
-        if: matrix.os != 'windows-latest'
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           python -m venv test_env
@@ -183,10 +210,10 @@ jobs:
         shell: bash
         run: ./.github/scripts/smoke-install.sh dist/*.whl "${{ matrix.python-version }}"
       - name: Upload package artifacts
-        if: inputs.upload_artifacts || matrix.os == 'windows-latest'
+        if: inputs.upload_artifacts || matrix.platform == 'windows'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: python-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: ${{ matrix.artifact_name }}
           path: dist/*.whl
 
   windows_abi3_compat:
@@ -213,7 +240,7 @@ jobs:
       - name: Download Windows wheel artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: python-wheel-windows-latest-py3.10
+          name: python-wheel-windows-x86_64-py3.10
           path: dist
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
