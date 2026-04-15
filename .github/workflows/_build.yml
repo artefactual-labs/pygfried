@@ -78,7 +78,7 @@ jobs:
         run: uv run --no-sync python -m twine check --strict dist/*.tar.gz
       - name: Upload sdist artifact
         if: inputs.upload_artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-sdist
           path: dist/*.tar.gz
@@ -211,7 +211,7 @@ jobs:
         run: ./.github/scripts/smoke-install.sh dist/*.whl "${{ matrix.python-version }}"
       - name: Upload package artifacts
         if: inputs.upload_artifacts || matrix.platform == 'windows'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/*.whl
