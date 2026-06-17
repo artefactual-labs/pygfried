@@ -46,6 +46,16 @@ def test_identify_detailed(siegfried_version):
     }
 
 
+def test_identify_detailed_escapes_error_strings():
+    path = "C:\\Users\\j472\\Documents\\missing"
+
+    result = pygfried.identify(path, detailed=True)
+
+    assert len(result["files"]) == 1
+    assert result["files"][0]["filename"] == path
+    assert path in result["files"][0]["errors"]
+
+
 def parse_iso_date(date_string):
     """Parse ISO date string with compatibility for Python 3.9-3.11"""
     try:

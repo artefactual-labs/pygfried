@@ -2,6 +2,7 @@ package pygfried
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -87,6 +88,31 @@ func IdentifyAll(paths []string) ([]*Result, error) {
 	return rs, nil
 }
 
+type jsonEscapedError struct {
+	err error
+}
+
+func (e jsonEscapedError) Error() string {
+	return escapeJSONStringContent(e.err.Error())
+}
+
+func escapeJSONError(err error) error {
+	if err == nil {
+		return nil
+	}
+	// Work around siegfried's JSON writer escaping filenames but interpolating
+	// error strings directly. Remove this once upstream escapes errors too.
+	return jsonEscapedError{err: err}
+}
+
+func escapeJSONStringContent(s string) string {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return s
+	}
+	return string(b[1 : len(b)-1])
+}
+
 func IdentifyAllWithJSON(paths []string) (string, error) {
 	sf := load()
 
@@ -104,6 +130,7 @@ func IdentifyAllWithJSON(paths []string) (string, error) {
 			size = info.Size()
 		}
 		ids, identifyErr := identify(sf, path)
+		identifyErr = escapeJSONError(identifyErr)
 		w.File(path, size, mod.Format(time.RFC3339), nil, identifyErr, ids)
 	}
 

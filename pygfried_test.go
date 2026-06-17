@@ -3,6 +3,7 @@ package pygfried_test
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/artefactual-labs/pygfried"
@@ -98,6 +99,29 @@ func TestIdentifyAllWithJSON(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestIdentifyAllWithJSONEscapesErrorStrings(t *testing.T) {
+	path := `C:\Users\j472\Documents\missing`
+	blob, err := pygfried.IdentifyAllWithJSON([]string{path})
+
+	assert.NilError(t, err)
+
+	type File struct {
+		Filename string `json:"filename"`
+		Errors   string `json:"errors"`
+	}
+	type Response struct {
+		Files []File `json:"files"`
+	}
+
+	var response Response
+	err = json.Unmarshal([]byte(blob), &response)
+	assert.NilError(t, err)
+
+	assert.Equal(t, len(response.Files), 1)
+	assert.Equal(t, response.Files[0].Filename, path)
+	assert.Assert(t, strings.Contains(response.Files[0].Errors, path))
 }
 
 func TestVersion(t *testing.T) {
