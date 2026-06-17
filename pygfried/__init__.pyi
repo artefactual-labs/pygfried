@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from typing import Literal
 from typing import TypedDict
 from typing import overload
@@ -41,4 +42,16 @@ class DetailedIdentifyResult(TypedDict):
 def identify(path: str, detailed: Literal[True]) -> DetailedIdentifyResult: ...
 @overload
 def identify(path: str, detailed: Literal[False] = False) -> SimpleIdentifyResult: ...
+def identify_many(
+    paths: Iterable[str],
+    *,
+    workers: int = 1,
+) -> DetailedIdentifyResult: ...
+def identify_dir(
+    path: str,
+    *,
+    recursive: bool = True,
+    workers: int = 1,
+    follow_symlinks: bool = False,
+) -> DetailedIdentifyResult: ...
 def version() -> str: ...

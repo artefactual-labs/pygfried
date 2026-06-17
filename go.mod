@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	github.com/richardlehane/siegfried v1.11.4
+	golang.org/x/sync v0.21.0
 	gotest.tools/v3 v3.5.2
 )
 
