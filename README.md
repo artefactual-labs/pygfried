@@ -26,6 +26,24 @@ $ python -q
 'fmt/11'
 >>> pygfried.identify("example.png", detailed=True)
 {'siegfried': '1.11.2', 'scandate': '2025-06-10T07:16:31+02:00', 'signature': 'default.sig', 'created': '2025-03-01T15:28:08+11:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V120.xml; container-signature-20240715.xml'}], 'files': [{'filename': 'example.png', 'filesize': 237675, 'modified': '2025-06-10T07:11:26+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/11', 'format': 'Portable Network Graphics', 'version': '1.0', 'mime': 'image/png', 'class': 'Image (Raster)', 'basis': 'extension match png; byte match at [[0 16] [237663 12]]', 'warning': ''}]}]}
+>>> pygfried.identify_many(["example.png", "README.md"], workers=2)
+{'siegfried': '1.11.2', ...}
+>>> pygfried.identify_dir("samples", recursive=True, workers=2)
+{'siegfried': '1.11.2', ...}
+```
+
+By default `identify_dir` skips symlinks. Use `follow_symlinks=True` to
+identify file symlinks and descend symlinked directories; directory cycles are
+skipped, and repeated links to the same directory are scanned once.
+
+Use Python's `pathlib` or `glob` modules when you want glob-style path
+selection:
+
+```
+>>> from pathlib import Path
+>>> paths = [str(path) for path in Path("samples").rglob("*.png")]
+>>> pygfried.identify_many(paths, workers=2)
+{'siegfried': '1.11.2', ...}
 ```
 
 ## Limitations
@@ -50,4 +68,3 @@ the siegfried project and its contributors.
 
 [siegfried]: https://www.itforarchivists.com/siegfried
 [unsupported]: https://github.com/golang/go/issues/65050
-
