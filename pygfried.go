@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/richardlehane/siegfried"
@@ -17,16 +18,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var sf *siegfried.Siegfried
+var (
+	sf     *siegfried.Siegfried
+	sfOnce sync.Once
+)
 
 const maxWorkers = 1024
 
 func load() *siegfried.Siegfried {
-	if sf != nil {
-		return sf
-	}
-
-	sf = static.New()
+	sfOnce.Do(func() {
+		sf = static.New()
+	})
 
 	return sf
 }
