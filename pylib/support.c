@@ -196,11 +196,53 @@ static PyObject* pygfried_identify_dir_wrapper(PyObject* self, PyObject* args, P
     return result;
 }
 
+static const char identify_doc[] =
+    "identify(path, detailed=False)\n"
+    "--\n"
+    "\n"
+    "Identify one file. Return the first PRONOM identifier by default, or a\n"
+    "detailed siegfried-style result dictionary when detailed is true.";
+
+static const char identify_many_doc[] =
+    "identify_many(paths, *, workers=1)\n"
+    "--\n"
+    "\n"
+    "Identify an iterable of file paths and return a detailed siegfried-style\n"
+    "result dictionary. The workers argument controls Go-side concurrency.";
+
+static const char identify_dir_doc[] =
+    "identify_dir(path, *, recursive=True, workers=1, follow_symlinks=False)\n"
+    "--\n"
+    "\n"
+    "Identify regular files under a directory and return a detailed\n"
+    "siegfried-style result dictionary. The workers argument controls Go-side concurrency.";
+
+static const char version_doc[] =
+    "version()\n"
+    "--\n"
+    "\n"
+    "Return the embedded siegfried version.";
+
 static struct PyMethodDef methods[] = {
-    {"identify", (PyCFunction)pygfried_identify_wrapper, METH_VARARGS | METH_KEYWORDS},
-    {"identify_many", (PyCFunction)pygfried_identify_many_wrapper, METH_VARARGS | METH_KEYWORDS},
-    {"identify_dir", (PyCFunction)pygfried_identify_dir_wrapper, METH_VARARGS | METH_KEYWORDS},
-    {"version", (PyCFunction)version, METH_NOARGS},
+    {
+        "identify",
+        (PyCFunction)pygfried_identify_wrapper,
+        METH_VARARGS | METH_KEYWORDS,
+        identify_doc,
+    },
+    {
+        "identify_many",
+        (PyCFunction)pygfried_identify_many_wrapper,
+        METH_VARARGS | METH_KEYWORDS,
+        identify_many_doc,
+    },
+    {
+        "identify_dir",
+        (PyCFunction)pygfried_identify_dir_wrapper,
+        METH_VARARGS | METH_KEYWORDS,
+        identify_dir_doc,
+    },
+    {"version", (PyCFunction)version, METH_NOARGS, version_doc},
     {NULL, NULL}
 };
 
