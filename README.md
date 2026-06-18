@@ -32,19 +32,30 @@ $ python -q
 {'siegfried': '1.11.2', ...}
 ```
 
-By default `identify_dir` skips symlinks. Use `follow_symlinks=True` to
-identify file symlinks and descend symlinked directories; directory cycles are
-skipped, and repeated links to the same directory are scanned once.
+### Batch and directory scans
 
-Use Python's `pathlib` or `glob` modules when you want glob-style path
-selection:
+Use `identify_many` when you already have a list of paths, or `identify_dir`
+when you want pygfried to scan a directory for you. Both functions return the
+same detailed result shape as `identify(..., detailed=True)`.
 
 ```
 >>> from pathlib import Path
 >>> paths = [str(path) for path in Path("samples").rglob("*.png")]
->>> pygfried.identify_many(paths, workers=2)
+>>> pygfried.identify_many(paths, workers=4)
+{'siegfried': '1.11.2', ...}
+>>> pygfried.identify_dir("samples", recursive=True, workers=4)
 {'siegfried': '1.11.2', ...}
 ```
+
+The `workers` argument controls Go-side concurrency. The default is `1`, which
+is the most conservative setting. For directories or large path lists, higher
+values can be much faster because pygfried avoids repeated Python-to-Go calls
+and identifies multiple files in parallel. A good starting point is the number
+of CPU cores available to your process, then measure with your own files.
+
+By default `identify_dir` skips symlinks. Use `follow_symlinks=True` to
+identify file symlinks and descend symlinked directories; directory cycles are
+skipped, and repeated links to the same directory are scanned once.
 
 ## Limitations
 
