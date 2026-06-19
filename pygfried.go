@@ -40,6 +40,12 @@ func identify(sf *siegfried.Siegfried, path string) ([]core.Identification, erro
 	}
 	defer f.Close()
 
+	return identifyOpen(sf, f, path)
+}
+
+// identifyOpen identifies an already-open file so callers can reuse the same
+// descriptor for metadata and format detection.
+func identifyOpen(sf *siegfried.Siegfried, f *os.File, path string) ([]core.Identification, error) {
 	return sf.Identify(f, filepath.Base(path), "")
 }
 
@@ -153,13 +159,26 @@ func identifyAll(paths []string, opts IdentifyOptions) ([]fileResult, error) {
 
 func identifyPath(sf *siegfried.Siegfried, path string) fileResult {
 	result := fileResult{path: path}
-	info, err := os.Stat(path)
+
+	f, err := os.Open(path)
+	if err != nil {
+		info, statErr := os.Stat(path)
+		if statErr == nil {
+			result.mod = info.ModTime()
+			result.size = info.Size()
+		}
+		result.err = err
+		return result
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
 	if err == nil {
 		result.mod = info.ModTime()
 		result.size = info.Size()
 	}
 
-	result.ids, result.err = identify(sf, path)
+	result.ids, result.err = identifyOpen(sf, f, path)
 	return result
 }
 
