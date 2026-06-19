@@ -2,9 +2,9 @@
 
 /* Will come from Go. */
 PyObject* identify(PyObject*, PyObject*);
-PyObject* identify_with_json(PyObject*, PyObject*);
-PyObject* identify_many_with_json(PyObject*, PyObject*);
-PyObject* identify_dir_with_json(PyObject*, PyObject*);
+PyObject* identify_detailed(PyObject*, PyObject*);
+PyObject* identify_many_detailed(PyObject*, PyObject*);
+PyObject* identify_dir_detailed(PyObject*, PyObject*);
 PyObject* version(PyObject*);
 
 /* To shim Go's missing variadic function support. */
@@ -31,27 +31,6 @@ PyObject* Pygfried_Py_RETURN_NONE() {
 
 /* Exception types. */
 PyObject* Pygfried_GoError;
-
-/* JSON loading function used by Go. */
-PyObject* Pygfried_json_loads(PyObject* json_str) {
-    PyObject* json_module = PyImport_ImportModule("json");
-    if (!json_module) {
-        return NULL;
-    }
-
-    PyObject* loads_func = PyObject_GetAttrString(json_module, "loads");
-    Py_DECREF(json_module);
-    if (!loads_func) {
-        return NULL;
-    }
-
-    PyObject* args = PyTuple_Pack(1, json_str);
-    PyObject* result = PyObject_CallObject(loads_func, args);
-    Py_DECREF(loads_func);
-    Py_DECREF(args);
-
-    return result;
-}
 
 static int validate_workers(int workers) {
     if (workers < 1 || workers > 1024) {
@@ -88,7 +67,7 @@ static PyObject* pygfried_identify_wrapper(PyObject* self, PyObject* args, PyObj
 
     PyObject* result;
     if (use_detailed) {
-        result = identify_with_json(self, go_func_args);
+        result = identify_detailed(self, go_func_args);
     } else {
         result = identify(self, go_func_args);
     }
@@ -136,7 +115,7 @@ static PyObject* pygfried_identify_many_wrapper(PyObject* self, PyObject* args, 
     PyTuple_SetItem(go_func_args, 0, paths_list);
     PyTuple_SetItem(go_func_args, 1, py_workers);
 
-    PyObject* result = identify_many_with_json(self, go_func_args);
+    PyObject* result = identify_many_detailed(self, go_func_args);
 
     Py_DECREF(go_func_args);
     return result;
@@ -190,7 +169,7 @@ static PyObject* pygfried_identify_dir_wrapper(PyObject* self, PyObject* args, P
     PyTuple_SetItem(go_func_args, 2, py_workers);
     PyTuple_SetItem(go_func_args, 3, py_follow_symlinks);
 
-    PyObject* result = identify_dir_with_json(self, go_func_args);
+    PyObject* result = identify_dir_detailed(self, go_func_args);
 
     Py_DECREF(go_func_args);
     return result;

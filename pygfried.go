@@ -60,6 +60,37 @@ type IdentifyDirOptions struct {
 	FollowSymlinks bool
 }
 
+type DetailedResult struct {
+	Siegfried   string
+	ScanDate    string
+	Signature   string
+	Created     string
+	Identifiers []DetailedIdentifier
+	Files       []DetailedFile
+}
+
+type DetailedIdentifier struct {
+	Name    string
+	Details string
+}
+
+type DetailedFile struct {
+	Filename string
+	FileSize int64
+	Modified string
+	Errors   string
+	Matches  []DetailedMatch
+}
+
+type DetailedMatch struct {
+	Fields []DetailedMatchField
+}
+
+type DetailedMatchField struct {
+	Name  string
+	Value string
+}
+
 func buildResult(path string, ids []core.Identification, err error) *Result {
 	res := &Result{
 		Path: path,
@@ -89,6 +120,10 @@ func Identify(path string) (*Result, error) {
 
 func IdentifyWithJSON(path string) (string, error) {
 	return IdentifyAllWithJSON([]string{path})
+}
+
+func IdentifyWithDetailedResult(path string) (*DetailedResult, error) {
+	return IdentifyAllWithDetailedOptions([]string{path}, IdentifyOptions{Workers: 1})
 }
 
 func IdentifyAll(paths []string) ([]*Result, error) {
@@ -202,6 +237,16 @@ func IdentifyAllWithJSONOptions(paths []string, opts IdentifyOptions) (string, e
 	return writeJSONResults(results, scanDate), nil
 }
 
+func IdentifyAllWithDetailedOptions(paths []string, opts IdentifyOptions) (*DetailedResult, error) {
+	scanDate := time.Now()
+	results, err := identifyAll(paths, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildDetailedResult(results, scanDate), nil
+}
+
 func IdentifyDirWithJSON(path string, opts IdentifyDirOptions) (string, error) {
 	scanDate := time.Now()
 	paths, err := collectDirPaths(path, opts)
@@ -215,6 +260,103 @@ func IdentifyDirWithJSON(path string, opts IdentifyDirOptions) (string, error) {
 	}
 
 	return writeJSONResults(results, scanDate), nil
+}
+
+func IdentifyDirWithDetailedResult(path string, opts IdentifyDirOptions) (*DetailedResult, error) {
+	scanDate := time.Now()
+	paths, err := collectDirPaths(path, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := identifyAll(paths, IdentifyOptions{Workers: opts.Workers})
+	if err != nil {
+		return nil, err
+	}
+
+	return buildDetailedResult(results, scanDate), nil
+}
+
+func buildDetailedResult(results []fileResult, scanDate time.Time) *DetailedResult {
+	sf := load()
+	version := config.Version()
+	identifiers := sf.Identifiers()
+	fields := sf.Fields()
+
+	result := &DetailedResult{
+		Siegfried:   fmt.Sprintf("%d.%d.%d", version[0], version[1], version[2]),
+		ScanDate:    scanDate.Format(time.RFC3339),
+		Signature:   config.SignatureBase(),
+		Created:     sf.C.Format(time.RFC3339),
+		Identifiers: make([]DetailedIdentifier, len(identifiers)),
+		Files:       make([]DetailedFile, len(results)),
+	}
+
+	for idx, id := range identifiers {
+		result.Identifiers[idx] = DetailedIdentifier{
+			Name:    id[0],
+			Details: id[1],
+		}
+	}
+
+	for idx, file := range results {
+		result.Files[idx] = buildDetailedFile(file, fields)
+	}
+
+	return result
+}
+
+func buildDetailedFile(result fileResult, fields [][]string) DetailedFile {
+	file := DetailedFile{
+		Filename: result.path,
+		FileSize: result.size,
+		Modified: result.mod.Format(time.RFC3339),
+		Matches:  make([]DetailedMatch, 0, len(result.ids)),
+	}
+	if result.err != nil {
+		file.Errors = result.err.Error()
+	}
+
+	var identifierIndex int = -1
+	var identifierName string
+	for _, id := range result.ids {
+		values := id.Values()
+		if len(values) > 0 && values[0] != identifierName {
+			identifierIndex++
+			identifierName = values[0]
+		}
+		file.Matches = append(file.Matches, buildDetailedMatch(values, fields, identifierIndex))
+	}
+
+	return file
+}
+
+func buildDetailedMatch(values []string, fields [][]string, identifierIndex int) DetailedMatch {
+	var names []string
+	if identifierIndex >= 0 && identifierIndex < len(fields) {
+		names = fields[identifierIndex]
+	}
+
+	match := DetailedMatch{
+		Fields: make([]DetailedMatchField, 0, len(values)),
+	}
+	for idx, value := range values {
+		if idx >= len(names) {
+			break
+		}
+		match.Fields = append(match.Fields, DetailedMatchField{
+			Name:  detailedMatchFieldName(names[idx]),
+			Value: value,
+		})
+	}
+	return match
+}
+
+func detailedMatchFieldName(name string) string {
+	if name == "namespace" {
+		return "ns"
+	}
+	return name
 }
 
 func writeJSONResults(results []fileResult, scanDate time.Time) string {

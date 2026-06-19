@@ -46,6 +46,16 @@ def test_identify_detailed(siegfried_version):
             }
         ],
     }
+    assert list(result["files"][0]["matches"][0]) == [
+        "ns",
+        "id",
+        "format",
+        "version",
+        "mime",
+        "class",
+        "basis",
+        "warning",
+    ]
 
 
 def test_identify_detailed_escapes_error_strings():
@@ -56,6 +66,15 @@ def test_identify_detailed_escapes_error_strings():
     assert len(result["files"]) == 1
     assert result["files"][0]["filename"] == path
     assert path in result["files"][0]["errors"]
+
+
+def test_identify_detailed_preserves_json_sensitive_filename(tmp_path):
+    path = tmp_path / 'quote"backslash\\newline\nfile.py'
+    path.write_text("print('hello')\n")
+
+    result = pygfried.identify(str(path), detailed=True)
+
+    assert result["files"][0]["filename"] == str(path)
 
 
 def test_identify_many(siegfried_version):

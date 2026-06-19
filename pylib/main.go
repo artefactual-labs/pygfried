@@ -8,7 +8,6 @@ package main
 // extern int Pygfried_PyBytes_AsStringAndSize(PyObject*, char**, Py_ssize_t*);
 // extern PyObject* Pygfried_Py_RETURN_NONE();
 // extern PyObject* Pygfried_GoError;
-// extern PyObject* Pygfried_json_loads(PyObject*);
 import "C"
 
 import (
@@ -29,7 +28,7 @@ func raise(err error) *C.PyObject {
 
 func stringToPy(s string) *C.PyObject {
 	cstr := C.CString(s)
-	pystr := C.PyUnicode_FromString(cstr)
+	pystr := C.PyUnicode_FromStringAndSize(cstr, C.Py_ssize_t(len(s)))
 	C.free(unsafe.Pointer(cstr))
 	return pystr
 }
@@ -117,18 +116,6 @@ func goDirArgs(args *C.PyObject) (string, bool, int, bool, error) {
 	return ret, recursive != 0, int(workers), followSymlinks != 0, nil
 }
 
-func jsonStringToPyObject(jsonResult string) *C.PyObject {
-	pyStr := stringToPy(jsonResult)
-	if pyStr == nil {
-		return raise(fmt.Errorf("Failed to convert string to Python object"))
-	}
-
-	result := C.Pygfried_json_loads(pyStr)
-	C.Py_DecRef(pyStr)
-
-	return result
-}
-
 //export identify
 func identify(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	path, err := goStringFromArgs(args)
@@ -148,46 +135,46 @@ func identify(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	return stringToPyOrNone(res.Identifiers[0])
 }
 
-//export identify_with_json
-func identify_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
+//export identify_detailed
+func identify_detailed(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	path, err := goStringFromArgs(args)
 	if err != nil {
 		return raise(err)
 	}
 
-	jsonResult, err := pygfried.IdentifyWithJSON(path)
+	detailedResult, err := pygfried.IdentifyWithDetailedResult(path)
 	if err != nil {
 		return raise(err)
 	}
 
-	return jsonStringToPyObject(jsonResult)
+	return detailedResultToPyObject(detailedResult)
 }
 
-//export identify_many_with_json
-func identify_many_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
+//export identify_many_detailed
+func identify_many_detailed(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	paths, workers, err := goStringListAndIntFromArgs(args)
 	if err != nil {
 		return raise(err)
 	}
 
-	jsonResult, err := pygfried.IdentifyAllWithJSONOptions(paths, pygfried.IdentifyOptions{
+	detailedResult, err := pygfried.IdentifyAllWithDetailedOptions(paths, pygfried.IdentifyOptions{
 		Workers: workers,
 	})
 	if err != nil {
 		return raise(err)
 	}
 
-	return jsonStringToPyObject(jsonResult)
+	return detailedResultToPyObject(detailedResult)
 }
 
-//export identify_dir_with_json
-func identify_dir_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
+//export identify_dir_detailed
+func identify_dir_detailed(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	path, recursive, workers, followSymlinks, err := goDirArgs(args)
 	if err != nil {
 		return raise(err)
 	}
 
-	jsonResult, err := pygfried.IdentifyDirWithJSON(path, pygfried.IdentifyDirOptions{
+	detailedResult, err := pygfried.IdentifyDirWithDetailedResult(path, pygfried.IdentifyDirOptions{
 		Recursive:      recursive,
 		Workers:        workers,
 		FollowSymlinks: followSymlinks,
@@ -196,7 +183,7 @@ func identify_dir_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
 		return raise(err)
 	}
 
-	return jsonStringToPyObject(jsonResult)
+	return detailedResultToPyObject(detailedResult)
 }
 
 //export version
@@ -204,6 +191,148 @@ func version(self *C.PyObject) *C.PyObject {
 	v := pygfried.Version()
 
 	return stringToPyOrNone(v)
+}
+
+func detailedResultToPyObject(result *pygfried.DetailedResult) *C.PyObject {
+	obj := C.PyDict_New()
+	if obj == nil {
+		return nil
+	}
+
+	if !pyDictSetString(obj, "siegfried", result.Siegfried) ||
+		!pyDictSetString(obj, "scandate", result.ScanDate) ||
+		!pyDictSetString(obj, "signature", result.Signature) ||
+		!pyDictSetString(obj, "created", result.Created) ||
+		!pyDictSetItem(obj, "identifiers", identifiersToPyList(result.Identifiers)) ||
+		!pyDictSetItem(obj, "files", filesToPyList(result.Files)) {
+		C.Py_DecRef(obj)
+		return nil
+	}
+
+	return obj
+}
+
+func identifiersToPyList(identifiers []pygfried.DetailedIdentifier) *C.PyObject {
+	list := C.PyList_New(C.Py_ssize_t(len(identifiers)))
+	if list == nil {
+		return nil
+	}
+
+	for idx, identifier := range identifiers {
+		obj := C.PyDict_New()
+		if obj == nil {
+			C.Py_DecRef(list)
+			return nil
+		}
+		if !pyDictSetString(obj, "name", identifier.Name) ||
+			!pyDictSetString(obj, "details", identifier.Details) {
+			C.Py_DecRef(obj)
+			C.Py_DecRef(list)
+			return nil
+		}
+		if !pyListSetItem(list, idx, obj) {
+			C.Py_DecRef(list)
+			return nil
+		}
+	}
+
+	return list
+}
+
+func filesToPyList(files []pygfried.DetailedFile) *C.PyObject {
+	list := C.PyList_New(C.Py_ssize_t(len(files)))
+	if list == nil {
+		return nil
+	}
+
+	for idx, file := range files {
+		obj := detailedFileToPyObject(file)
+		if !pyListSetItem(list, idx, obj) {
+			C.Py_DecRef(list)
+			return nil
+		}
+	}
+
+	return list
+}
+
+func detailedFileToPyObject(file pygfried.DetailedFile) *C.PyObject {
+	obj := C.PyDict_New()
+	if obj == nil {
+		return nil
+	}
+
+	if !pyDictSetString(obj, "filename", file.Filename) ||
+		!pyDictSetItem(obj, "filesize", C.PyLong_FromLongLong(C.longlong(file.FileSize))) ||
+		!pyDictSetString(obj, "modified", file.Modified) ||
+		!pyDictSetString(obj, "errors", file.Errors) ||
+		!pyDictSetItem(obj, "matches", matchesToPyList(file.Matches)) {
+		C.Py_DecRef(obj)
+		return nil
+	}
+
+	return obj
+}
+
+func matchesToPyList(matches []pygfried.DetailedMatch) *C.PyObject {
+	list := C.PyList_New(C.Py_ssize_t(len(matches)))
+	if list == nil {
+		return nil
+	}
+
+	for idx, match := range matches {
+		obj := detailedMatchToPyObject(match)
+		if !pyListSetItem(list, idx, obj) {
+			C.Py_DecRef(list)
+			return nil
+		}
+	}
+
+	return list
+}
+
+func detailedMatchToPyObject(match pygfried.DetailedMatch) *C.PyObject {
+	obj := C.PyDict_New()
+	if obj == nil {
+		return nil
+	}
+
+	for _, field := range match.Fields {
+		if !pyDictSetString(obj, field.Name, field.Value) {
+			C.Py_DecRef(obj)
+			return nil
+		}
+	}
+
+	return obj
+}
+
+func pyDictSetString(dict *C.PyObject, key string, value string) bool {
+	return pyDictSetItem(dict, key, stringToPy(value))
+}
+
+func pyDictSetItem(dict *C.PyObject, key string, value *C.PyObject) bool {
+	if value == nil {
+		return false
+	}
+
+	cKey := C.CString(key)
+	result := C.PyDict_SetItemString(dict, cKey, value)
+	C.free(unsafe.Pointer(cKey))
+	C.Py_DecRef(value)
+
+	return result == 0
+}
+
+func pyListSetItem(list *C.PyObject, idx int, value *C.PyObject) bool {
+	if value == nil {
+		return false
+	}
+	if C.PyList_SetItem(list, C.Py_ssize_t(idx), value) != 0 {
+		C.Py_DecRef(value)
+		return false
+	}
+	return true
 }
 
 func main() {}
