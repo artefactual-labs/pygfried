@@ -3,7 +3,7 @@ module github.com/artefactual-labs/pygfried
 go 1.26.5
 
 require (
-	github.com/richardlehane/siegfried v1.11.5
+	github.com/richardlehane/siegfried v1.11.6
 	golang.org/x/sync v0.22.0
 	gotest.tools/v3 v3.5.2
 )
