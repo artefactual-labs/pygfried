@@ -23,8 +23,10 @@ uv sync --no-install-project
 ```
 
 That matters in this repo because installing the project builds the Go-backed
-extension. If you only need the development environment first, you can skip
-that build and postpone it until a later step such as `uv build`.
+extension. After changing Go sources or dependencies, rebuild the extension
+with `uv sync --reinstall-package pygfried` before running the Python tests.
+Note that `uv build` only refreshes artifacts under `build/` and `dist/`; it
+does not refresh the in-place extension used by `uv run pytest`.
 
 ## Common commands
 
