@@ -47,10 +47,32 @@ jobs:
           uv run --no-sync ruff check .
           uv run --no-sync ruff format --check .
 
+  go_test:
+    name: Go race and signature checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+      - name: Check the bundled Archivematica signature
+        run: go run ./internal/signatures/cmd/update -check
+      - name: Run Go tests with the race detector
+        run: go test -race .
+
   sdist:
     name: Build sdist
     runs-on: ubuntu-latest
-    needs: lint
+    needs:
+      - lint
+      - go_test
     permissions:
       contents: read
     env:
@@ -86,7 +108,9 @@ jobs:
   build:
     name: Build ${{ matrix.name }} (py${{ matrix.python-version }})
     runs-on: ${{ matrix.runner }}
-    needs: lint
+    needs:
+      - lint
+      - go_test
     permissions:
       contents: read
     strategy:

@@ -1,0 +1,4 @@
+include *.go
+include internal/signatures/archivematica.json
+include internal/signatures/archivematica.sig
+recursive-include internal/signatures *.go

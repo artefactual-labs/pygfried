@@ -44,8 +44,10 @@ uvx \
     --with "${PACKAGE_SPEC}" \
     --with rich \
     python -c '
-from pygfried import identify
+from pygfried import Scanner, identify
+from pathlib import Path
 from rich.pretty import pprint
+from tempfile import TemporaryDirectory
 
 target_file = "'"${TARGET_FILE}"'"
 expected_id = "'"${EXPECTED_ID}"'"
@@ -63,4 +65,15 @@ assert file0["errors"] == "", file0
 matches = file0["matches"]
 assert matches, file0
 assert matches[0]["id"] == expected_id, matches
+
+archivematica = Scanner(profile="archivematica")
+assert archivematica.profile == "archivematica"
+assert archivematica.signature == "archivematica.sig"
+archivematica_result = archivematica.identify(target_file, detailed=True)
+assert archivematica_result["signature"] == "archivematica.sig"
+
+with TemporaryDirectory() as directory:
+    ad1 = Path(directory) / "sample.ad1"
+    ad1.write_bytes(b"ADSEGMENTEDFILE")
+    assert archivematica.identify(str(ad1)) == "archivematica-fmt/2"
 '

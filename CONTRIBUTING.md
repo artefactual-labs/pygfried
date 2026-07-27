@@ -46,7 +46,7 @@ uv run pytest
 Tests in Go:
 
 ```bash
-go test -v .
+go test -race .
 ```
 
 Build:
@@ -99,6 +99,48 @@ and the files that lock or exercise those versions together.
 - [`go.mod`](./go.mod) defines the Go toolchain version.
 - [`go.mod`](./go.mod) also defines the Go module dependencies.
 - [`go.sum`](./go.sum) records dependency checksums.
+
+#### Upgrade Siegfried
+
+The Siegfried dependency and the bundled Archivematica signature database must
+be upgraded together. The default database comes from Siegfried's `pkg/static`
+package at compile time. Pygfried separately embeds
+`internal/signatures/archivematica.sig`, copied from
+`cmd/roy/data/archivematica.sig` in the same module version.
+
+Use this sequence:
+
+```bash
+go get github.com/richardlehane/siegfried@vX.Y.Z
+go mod tidy
+go run ./internal/signatures/cmd/update
+go test -race .
+uv sync --reinstall-package pygfried
+uv run pytest
+uv build --wheel
+./.github/scripts/smoke-install.sh dist/pygfried-*.whl
+```
+
+The update command reads the version selected by `go.mod`, downloads that exact
+module, copies its complete Archivematica database, and records its source
+version and SHA-256 checksum in `internal/signatures/archivematica.json`. Do not
+edit either generated file manually.
+
+The Go tests fail with the update command to run if the version or checksum is
+out of sync. Review dependency-update pull requests for this failure: updating
+`go.mod` alone is intentionally insufficient.
+
+To verify the checked-in files directly against the selected dependency without
+changing them, run:
+
+```bash
+go run ./internal/signatures/cmd/update -check
+```
+
+Before merging an upgrade, verify both normal PRONOM behavior and the focused
+Archivematica parity cases in the Go and Python suites. The race test is part of
+the compatibility check because scanner instances are documented as safe for
+concurrent use.
 
 ### GitHub Actions
 

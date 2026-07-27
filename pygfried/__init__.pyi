@@ -3,7 +3,7 @@ from typing import Literal
 from typing import TypedDict
 from typing import overload
 
-class GoError(Exception):
+class GoError(OSError):
     """Exception raised when Go code encounters an error."""
 
 SimpleIdentifyResult = Literal["UNKNOWN"] | str | None
@@ -37,6 +37,44 @@ class DetailedIdentifyResult(TypedDict):
     created: str
     identifiers: list[Identifier]
     files: list[File]
+
+class Scanner:
+    def __init__(
+        self,
+        *,
+        profile: Literal["default", "archivematica"] | None = None,
+        signature: str | None = None,
+    ) -> None: ...
+    @property
+    def profile(self) -> Literal["default", "archivematica"] | None: ...
+    @property
+    def signature(self) -> str: ...
+    @overload
+    def identify(
+        self,
+        path: str,
+        detailed: Literal[True],
+    ) -> DetailedIdentifyResult: ...
+    @overload
+    def identify(
+        self,
+        path: str,
+        detailed: Literal[False] = False,
+    ) -> SimpleIdentifyResult: ...
+    def identify_many(
+        self,
+        paths: Iterable[str],
+        *,
+        workers: int = 1,
+    ) -> DetailedIdentifyResult: ...
+    def identify_dir(
+        self,
+        path: str,
+        *,
+        recursive: bool = True,
+        workers: int = 1,
+        follow_symlinks: bool = False,
+    ) -> DetailedIdentifyResult: ...
 
 @overload
 def identify(path: str, detailed: Literal[True]) -> DetailedIdentifyResult: ...

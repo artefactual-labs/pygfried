@@ -1,11 +1,31 @@
 #include <Python.h>
+#include <string.h>
 
 /* Will come from Go. */
 PyObject* identify(PyObject*, PyObject*);
 PyObject* identify_with_json(PyObject*, PyObject*);
 PyObject* identify_many_with_json(PyObject*, PyObject*);
 PyObject* identify_dir_with_json(PyObject*, PyObject*);
+unsigned long long scanner_create(char*, char*);
+void scanner_delete(unsigned long long);
+PyObject* scanner_profile(PyObject*);
+PyObject* scanner_signature(PyObject*);
+PyObject* scanner_identify(PyObject*, PyObject*);
+PyObject* scanner_identify_with_json(PyObject*, PyObject*);
+PyObject* scanner_identify_many_with_json(PyObject*, PyObject*);
+PyObject* scanner_identify_dir_with_json(PyObject*, PyObject*);
 PyObject* version(PyObject*);
+
+typedef struct {
+    PyObject_HEAD
+    unsigned long long handle;
+} PygfriedScanner;
+
+typedef PyObject* (*PygfriedGoFunction)(PyObject*, PyObject*);
+
+unsigned long long Pygfried_ScannerHandle(PyObject* self) {
+    return ((PygfriedScanner*)self)->handle;
+}
 
 /* To shim Go's missing variadic function support. */
 int Pygfried_PyArg_ParseTuple_U(PyObject* args, PyObject** s) {
@@ -61,7 +81,13 @@ static int validate_workers(int workers) {
     return 1;
 }
 
-static PyObject* pygfried_identify_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* pygfried_identify_common(
+    PyObject* self,
+    PyObject* args,
+    PyObject* kwargs,
+    PygfriedGoFunction simple_func,
+    PygfriedGoFunction detailed_func
+) {
     char* path_str = NULL;
     PyObject* detailed_kwarg_obj = Py_False;
     static char* kwlist[] = {"path", "detailed", NULL};
@@ -88,16 +114,41 @@ static PyObject* pygfried_identify_wrapper(PyObject* self, PyObject* args, PyObj
 
     PyObject* result;
     if (use_detailed) {
-        result = identify_with_json(self, go_func_args);
+        result = detailed_func(self, go_func_args);
     } else {
-        result = identify(self, go_func_args);
+        result = simple_func(self, go_func_args);
     }
 
     Py_DECREF(go_func_args);
     return result;
 }
 
-static PyObject* pygfried_identify_many_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* pygfried_identify_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+    return pygfried_identify_common(
+        self,
+        args,
+        kwargs,
+        identify,
+        identify_with_json
+    );
+}
+
+static PyObject* pygfried_scanner_identify_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+    return pygfried_identify_common(
+        self,
+        args,
+        kwargs,
+        scanner_identify,
+        scanner_identify_with_json
+    );
+}
+
+static PyObject* pygfried_identify_many_common(
+    PyObject* self,
+    PyObject* args,
+    PyObject* kwargs,
+    PygfriedGoFunction go_func
+) {
     PyObject* paths_obj = NULL;
     int workers = 1;
     static char* kwlist[] = {"paths", "workers", NULL};
@@ -136,13 +187,36 @@ static PyObject* pygfried_identify_many_wrapper(PyObject* self, PyObject* args, 
     PyTuple_SetItem(go_func_args, 0, paths_list);
     PyTuple_SetItem(go_func_args, 1, py_workers);
 
-    PyObject* result = identify_many_with_json(self, go_func_args);
+    PyObject* result = go_func(self, go_func_args);
 
     Py_DECREF(go_func_args);
     return result;
 }
 
-static PyObject* pygfried_identify_dir_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* pygfried_identify_many_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+    return pygfried_identify_many_common(
+        self,
+        args,
+        kwargs,
+        identify_many_with_json
+    );
+}
+
+static PyObject* pygfried_scanner_identify_many_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+    return pygfried_identify_many_common(
+        self,
+        args,
+        kwargs,
+        scanner_identify_many_with_json
+    );
+}
+
+static PyObject* pygfried_identify_dir_common(
+    PyObject* self,
+    PyObject* args,
+    PyObject* kwargs,
+    PygfriedGoFunction go_func
+) {
     char* path_str = NULL;
     PyObject* recursive_obj = Py_True;
     int workers = 1;
@@ -190,17 +264,109 @@ static PyObject* pygfried_identify_dir_wrapper(PyObject* self, PyObject* args, P
     PyTuple_SetItem(go_func_args, 2, py_workers);
     PyTuple_SetItem(go_func_args, 3, py_follow_symlinks);
 
-    PyObject* result = identify_dir_with_json(self, go_func_args);
+    PyObject* result = go_func(self, go_func_args);
 
     Py_DECREF(go_func_args);
     return result;
+}
+
+static PyObject* pygfried_identify_dir_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+    return pygfried_identify_dir_common(
+        self,
+        args,
+        kwargs,
+        identify_dir_with_json
+    );
+}
+
+static PyObject* pygfried_scanner_identify_dir_wrapper(PyObject* self, PyObject* args, PyObject* kwargs) {
+    return pygfried_identify_dir_common(
+        self,
+        args,
+        kwargs,
+        scanner_identify_dir_with_json
+    );
+}
+
+static PyObject* pygfried_scanner_new(
+    PyTypeObject* type,
+    PyObject* args,
+    PyObject* kwargs
+) {
+    char* profile = NULL;
+    char* signature = NULL;
+    static char* kwlist[] = {"profile", "signature", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(
+        args,
+        kwargs,
+        "|$zz:Scanner",
+        kwlist,
+        &profile,
+        &signature
+    )) {
+        return NULL;
+    }
+    if (profile && signature) {
+        PyErr_SetString(
+            PyExc_ValueError,
+            "profile and signature are mutually exclusive"
+        );
+        return NULL;
+    }
+    if (signature && signature[0] == '\0') {
+        PyErr_SetString(PyExc_ValueError, "signature must not be empty");
+        return NULL;
+    }
+    if (
+        profile &&
+        strcmp(profile, "default") != 0 &&
+        strcmp(profile, "archivematica") != 0
+    ) {
+        PyErr_Format(PyExc_ValueError, "unknown profile \"%s\"", profile);
+        return NULL;
+    }
+
+    unsigned long long handle = scanner_create(profile, signature);
+    if (!handle) {
+        return NULL;
+    }
+
+    PygfriedScanner* self = (PygfriedScanner*)PyType_GenericAlloc(type, 0);
+    if (!self) {
+        scanner_delete(handle);
+        return NULL;
+    }
+    self->handle = handle;
+    return (PyObject*)self;
+}
+
+static void pygfried_scanner_dealloc(PyObject* self) {
+    PyTypeObject* type = Py_TYPE(self);
+    PygfriedScanner* scanner = (PygfriedScanner*)self;
+    if (scanner->handle) {
+        scanner_delete(scanner->handle);
+        scanner->handle = 0;
+    }
+
+    freefunc free_func = (freefunc)PyType_GetSlot(type, Py_tp_free);
+    free_func(self);
+    Py_DECREF((PyObject*)type);
+}
+
+static PyObject* pygfried_scanner_profile_getter(PyObject* self, void* closure) {
+    return scanner_profile(self);
+}
+
+static PyObject* pygfried_scanner_signature_getter(PyObject* self, void* closure) {
+    return scanner_signature(self);
 }
 
 static const char identify_doc[] =
     "identify(path, detailed=False)\n"
     "--\n"
     "\n"
-    "Identify one file. Return the first PRONOM identifier by default, or a\n"
+    "Identify one file. Return the first format identifier by default, or a\n"
     "detailed siegfried-style result dictionary when detailed is true.";
 
 static const char identify_many_doc[] =
@@ -222,6 +388,13 @@ static const char version_doc[] =
     "--\n"
     "\n"
     "Return the embedded siegfried version.";
+
+static const char scanner_doc[] =
+    "Scanner(*, profile=None, signature=None)\n"
+    "--\n"
+    "\n"
+    "Create a reusable file format scanner. Select the embedded \"default\" or\n"
+    "\"archivematica\" profile, or load a complete external signature database.";
 
 static struct PyMethodDef methods[] = {
     {
@@ -246,10 +419,86 @@ static struct PyMethodDef methods[] = {
     {NULL, NULL}
 };
 
+static struct PyMethodDef scanner_methods[] = {
+    {
+        "identify",
+        (PyCFunction)pygfried_scanner_identify_wrapper,
+        METH_VARARGS | METH_KEYWORDS,
+        identify_doc,
+    },
+    {
+        "identify_many",
+        (PyCFunction)pygfried_scanner_identify_many_wrapper,
+        METH_VARARGS | METH_KEYWORDS,
+        identify_many_doc,
+    },
+    {
+        "identify_dir",
+        (PyCFunction)pygfried_scanner_identify_dir_wrapper,
+        METH_VARARGS | METH_KEYWORDS,
+        identify_dir_doc,
+    },
+    {NULL, NULL}
+};
+
+static PyGetSetDef scanner_getset[] = {
+    {
+        "profile",
+        pygfried_scanner_profile_getter,
+        NULL,
+        "Selected bundled profile, or None for an external signature.",
+        NULL,
+    },
+    {
+        "signature",
+        pygfried_scanner_signature_getter,
+        NULL,
+        "Logical filename of the loaded signature database.",
+        NULL,
+    },
+    {NULL, NULL}
+};
+
+static PyType_Slot scanner_slots[] = {
+    {Py_tp_doc, (void*)scanner_doc},
+    {Py_tp_new, (void*)pygfried_scanner_new},
+    {Py_tp_dealloc, (void*)pygfried_scanner_dealloc},
+    {Py_tp_methods, (void*)scanner_methods},
+    {Py_tp_getset, (void*)scanner_getset},
+    {0, NULL}
+};
+
+static PyType_Spec scanner_spec = {
+    "pygfried.Scanner",
+    sizeof(PygfriedScanner),
+    0,
+    Py_TPFLAGS_DEFAULT,
+    scanner_slots,
+};
+
 static PyObject* _setup_module(PyObject* module) {
     if (module) {
         Pygfried_GoError = PyErr_NewException("pygfried.GoError", PyExc_OSError, NULL);
-        PyModule_AddObject(module, "GoError", Pygfried_GoError);
+        if (!Pygfried_GoError) {
+            Py_DECREF(module);
+            return NULL;
+        }
+        if (PyModule_AddObject(module, "GoError", Pygfried_GoError) < 0) {
+            Py_DECREF(Pygfried_GoError);
+            Py_DECREF(module);
+            return NULL;
+        }
+
+        PyObject* scanner_type = PyType_FromSpec(&scanner_spec);
+        if (!scanner_type) {
+            Py_DECREF(module);
+            return NULL;
+        }
+        if (PyModule_AddObject(module, "Scanner", scanner_type) < 0) {
+            Py_DECREF(scanner_type);
+            Py_DECREF(module);
+            return NULL;
+        }
     }
     return module;
 }
