@@ -6,6 +6,7 @@ package main
 // extern int Pygfried_PyArg_ParseTuple_Oi(PyObject*, PyObject**, int*);
 // extern int Pygfried_PyArg_ParseTuple_Uiii(PyObject*, PyObject**, int*, int*, int*);
 // extern int Pygfried_PyBytes_AsStringAndSize(PyObject*, char**, Py_ssize_t*);
+// extern unsigned long long Pygfried_ScannerHandle(PyObject*);
 // extern PyObject* Pygfried_Py_RETURN_NONE();
 // extern PyObject* Pygfried_GoError;
 // extern PyObject* Pygfried_json_loads(PyObject*);
@@ -13,6 +14,7 @@ import "C"
 
 import (
 	"fmt"
+	"runtime/cgo"
 	"strings"
 	"unsafe"
 
@@ -20,11 +22,15 @@ import (
 )
 
 func raise(err error) *C.PyObject {
+	setError(err)
+	return nil
+}
+
+func setError(err error) {
 	tp := C.Pygfried_GoError
 	cstr := C.CString(err.Error())
 	C.PyErr_SetString(tp, cstr)
 	C.free(unsafe.Pointer(cstr))
-	return nil
 }
 
 func stringToPy(s string) *C.PyObject {
@@ -129,6 +135,57 @@ func jsonStringToPyObject(jsonResult string) *C.PyObject {
 	return result
 }
 
+func scannerFromPy(self *C.PyObject) (*pygfried.Scanner, error) {
+	handle := cgo.Handle(C.Pygfried_ScannerHandle(self))
+	scanner, ok := handle.Value().(*pygfried.Scanner)
+	if !ok {
+		return nil, fmt.Errorf("invalid scanner handle")
+	}
+	return scanner, nil
+}
+
+//export scanner_create
+func scanner_create(profile *C.char, signature *C.char) C.ulonglong {
+	var opts pygfried.ScannerOptions
+	if profile != nil {
+		opts.Profile = C.GoString(profile)
+	}
+	if signature != nil {
+		opts.Signature = C.GoString(signature)
+	}
+
+	scanner, err := pygfried.NewScanner(opts)
+	if err != nil {
+		setError(err)
+		return 0
+	}
+
+	return C.ulonglong(cgo.NewHandle(scanner))
+}
+
+//export scanner_delete
+func scanner_delete(value C.ulonglong) {
+	cgo.Handle(value).Delete()
+}
+
+//export scanner_profile
+func scanner_profile(self *C.PyObject) *C.PyObject {
+	scanner, err := scannerFromPy(self)
+	if err != nil {
+		return raise(err)
+	}
+	return stringToPyOrNone(scanner.Profile())
+}
+
+//export scanner_signature
+func scanner_signature(self *C.PyObject) *C.PyObject {
+	scanner, err := scannerFromPy(self)
+	if err != nil {
+		return raise(err)
+	}
+	return stringToPyOrNone(scanner.Signature())
+}
+
 //export identify
 func identify(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	path, err := goStringFromArgs(args)
@@ -137,6 +194,30 @@ func identify(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	}
 
 	res, err := pygfried.Identify(path)
+	if err != nil {
+		return raise(err)
+	}
+
+	if len(res.Identifiers) == 0 {
+		return C.Pygfried_Py_RETURN_NONE()
+	}
+
+	return stringToPyOrNone(res.Identifiers[0])
+}
+
+//export scanner_identify
+func scanner_identify(self *C.PyObject, args *C.PyObject) *C.PyObject {
+	scanner, err := scannerFromPy(self)
+	if err != nil {
+		return raise(err)
+	}
+
+	path, err := goStringFromArgs(args)
+	if err != nil {
+		return nil
+	}
+
+	res, err := scanner.Identify(path)
 	if err != nil {
 		return raise(err)
 	}
@@ -163,6 +244,26 @@ func identify_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	return jsonStringToPyObject(jsonResult)
 }
 
+//export scanner_identify_with_json
+func scanner_identify_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
+	scanner, err := scannerFromPy(self)
+	if err != nil {
+		return raise(err)
+	}
+
+	path, err := goStringFromArgs(args)
+	if err != nil {
+		return raise(err)
+	}
+
+	jsonResult, err := scanner.IdentifyWithJSON(path)
+	if err != nil {
+		return raise(err)
+	}
+
+	return jsonStringToPyObject(jsonResult)
+}
+
 //export identify_many_with_json
 func identify_many_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	paths, workers, err := goStringListAndIntFromArgs(args)
@@ -180,6 +281,28 @@ func identify_many_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	return jsonStringToPyObject(jsonResult)
 }
 
+//export scanner_identify_many_with_json
+func scanner_identify_many_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
+	scanner, err := scannerFromPy(self)
+	if err != nil {
+		return raise(err)
+	}
+
+	paths, workers, err := goStringListAndIntFromArgs(args)
+	if err != nil {
+		return raise(err)
+	}
+
+	jsonResult, err := scanner.IdentifyAllWithJSONOptions(paths, pygfried.IdentifyOptions{
+		Workers: workers,
+	})
+	if err != nil {
+		return raise(err)
+	}
+
+	return jsonStringToPyObject(jsonResult)
+}
+
 //export identify_dir_with_json
 func identify_dir_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	path, recursive, workers, followSymlinks, err := goDirArgs(args)
@@ -188,6 +311,30 @@ func identify_dir_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
 	}
 
 	jsonResult, err := pygfried.IdentifyDirWithJSON(path, pygfried.IdentifyDirOptions{
+		Recursive:      recursive,
+		Workers:        workers,
+		FollowSymlinks: followSymlinks,
+	})
+	if err != nil {
+		return raise(err)
+	}
+
+	return jsonStringToPyObject(jsonResult)
+}
+
+//export scanner_identify_dir_with_json
+func scanner_identify_dir_with_json(self *C.PyObject, args *C.PyObject) *C.PyObject {
+	scanner, err := scannerFromPy(self)
+	if err != nil {
+		return raise(err)
+	}
+
+	path, recursive, workers, followSymlinks, err := goDirArgs(args)
+	if err != nil {
+		return raise(err)
+	}
+
+	jsonResult, err := scanner.IdentifyDirWithJSON(path, pygfried.IdentifyDirOptions{
 		Recursive:      recursive,
 		Workers:        workers,
 		FollowSymlinks: followSymlinks,

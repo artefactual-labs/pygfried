@@ -7,31 +7,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/richardlehane/siegfried"
 	"github.com/richardlehane/siegfried/pkg/config"
 	"github.com/richardlehane/siegfried/pkg/core"
-	"github.com/richardlehane/siegfried/pkg/static"
 	"github.com/richardlehane/siegfried/pkg/writer"
 	"golang.org/x/sync/errgroup"
 )
 
-var (
-	sf     *siegfried.Siegfried
-	sfOnce sync.Once
-)
-
 const maxWorkers = 1024
-
-func load() *siegfried.Siegfried {
-	sfOnce.Do(func() {
-		sf = static.New()
-	})
-
-	return sf
-}
 
 func identify(sf *siegfried.Siegfried, path string) ([]core.Identification, error) {
 	f, err := os.Open(path)
@@ -82,9 +67,11 @@ func buildResult(path string, ids []core.Identification, err error) *Result {
 }
 
 func Identify(path string) (*Result, error) {
-	sf := load()
+	return loadDefaultScanner().Identify(path)
+}
 
-	ids, err := identify(sf, path)
+func (s *Scanner) Identify(path string) (*Result, error) {
+	ids, err := identify(s.sf, path)
 	if err != nil {
 		return nil, err
 	}
@@ -94,15 +81,27 @@ func Identify(path string) (*Result, error) {
 }
 
 func IdentifyWithJSON(path string) (string, error) {
-	return IdentifyAllWithJSON([]string{path})
+	return loadDefaultScanner().IdentifyWithJSON(path)
+}
+
+func (s *Scanner) IdentifyWithJSON(path string) (string, error) {
+	return s.IdentifyAllWithJSON([]string{path})
 }
 
 func IdentifyAll(paths []string) ([]*Result, error) {
-	return IdentifyAllWithOptions(paths, IdentifyOptions{Workers: 1})
+	return loadDefaultScanner().IdentifyAll(paths)
+}
+
+func (s *Scanner) IdentifyAll(paths []string) ([]*Result, error) {
+	return s.IdentifyAllWithOptions(paths, IdentifyOptions{Workers: 1})
 }
 
 func IdentifyAllWithOptions(paths []string, opts IdentifyOptions) ([]*Result, error) {
-	fileResults, err := identifyAll(paths, opts)
+	return loadDefaultScanner().IdentifyAllWithOptions(paths, opts)
+}
+
+func (s *Scanner) IdentifyAllWithOptions(paths []string, opts IdentifyOptions) ([]*Result, error) {
+	fileResults, err := identifyAll(s.sf, paths, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -133,13 +132,12 @@ func normalizeWorkers(workers int) (int, error) {
 	return workers, nil
 }
 
-func identifyAll(paths []string, opts IdentifyOptions) ([]fileResult, error) {
+func identifyAll(sf *siegfried.Siegfried, paths []string, opts IdentifyOptions) ([]fileResult, error) {
 	workers, err := normalizeWorkers(opts.Workers)
 	if err != nil {
 		return nil, err
 	}
 
-	sf := load()
 	results := make([]fileResult, len(paths))
 
 	var group errgroup.Group
@@ -208,41 +206,52 @@ func escapeJSONStringContent(s string) string {
 }
 
 func IdentifyAllWithJSON(paths []string) (string, error) {
-	return IdentifyAllWithJSONOptions(paths, IdentifyOptions{Workers: 1})
+	return loadDefaultScanner().IdentifyAllWithJSON(paths)
+}
+
+func (s *Scanner) IdentifyAllWithJSON(paths []string) (string, error) {
+	return s.IdentifyAllWithJSONOptions(paths, IdentifyOptions{Workers: 1})
 }
 
 func IdentifyAllWithJSONOptions(paths []string, opts IdentifyOptions) (string, error) {
+	return loadDefaultScanner().IdentifyAllWithJSONOptions(paths, opts)
+}
+
+func (s *Scanner) IdentifyAllWithJSONOptions(paths []string, opts IdentifyOptions) (string, error) {
 	scanDate := time.Now()
-	results, err := identifyAll(paths, opts)
+	results, err := identifyAll(s.sf, paths, opts)
 	if err != nil {
 		return "", err
 	}
 
-	return writeJSONResults(results, scanDate), nil
+	return s.writeJSONResults(results, scanDate), nil
 }
 
 func IdentifyDirWithJSON(path string, opts IdentifyDirOptions) (string, error) {
+	return loadDefaultScanner().IdentifyDirWithJSON(path, opts)
+}
+
+func (s *Scanner) IdentifyDirWithJSON(path string, opts IdentifyDirOptions) (string, error) {
 	scanDate := time.Now()
 	paths, err := collectDirPaths(path, opts)
 	if err != nil {
 		return "", err
 	}
 
-	results, err := identifyAll(paths, IdentifyOptions{Workers: opts.Workers})
+	results, err := identifyAll(s.sf, paths, IdentifyOptions{Workers: opts.Workers})
 	if err != nil {
 		return "", err
 	}
 
-	return writeJSONResults(results, scanDate), nil
+	return s.writeJSONResults(results, scanDate), nil
 }
 
-func writeJSONResults(results []fileResult, scanDate time.Time) string {
-	sf := load()
-
+func (s *Scanner) writeJSONResults(results []fileResult, scanDate time.Time) string {
 	var buf bytes.Buffer
 	w := writer.JSON(&buf)
 
-	w.Head(config.SignatureBase(), scanDate, sf.C, config.Version(), sf.Identifiers(), sf.Fields(), "")
+	signature := escapeJSONStringContent(s.signature)
+	w.Head(signature, scanDate, s.sf.C, config.Version(), s.sf.Identifiers(), s.sf.Fields(), "")
 
 	for _, result := range results {
 		identifyErr := escapeJSONError(result.err)
