@@ -21,29 +21,43 @@ $ pip install pygfried
 $ python -q
 >>> import pygfried
 >>> pygfried.version()
-'1.11.6'
+'1.11.8'
 >>> pygfried.identify("example.png")
-'fmt/11'
+'fmt/13'
 >>> pygfried.identify("example.png", detailed=True)
-{'siegfried': '1.11.6', 'scandate': '2025-06-10T07:16:31+02:00', 'signature': 'default.sig', 'created': '2025-03-01T15:28:08+11:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V124.xml; container-signature-20260119.xml'}], 'files': [{'filename': 'example.png', 'filesize': 237675, 'modified': '2025-06-10T07:11:26+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/11', 'format': 'Portable Network Graphics', 'version': '1.0', 'mime': 'image/png', 'class': 'Image (Raster)', 'basis': 'extension match png; byte match at [[0 16] [237663 12]]', 'warning': ''}]}]}
+{'siegfried': '1.11.8', 'scandate': '2026-09-23T18:18:29+02:00', 'signature': 'default.sig', 'created': '2026-09-15T19:45:35+10:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V125.xml; container-signature-20260119.xml'}], 'files': [{'filename': 'example.png', 'filesize': 676214, 'modified': '2025-06-13T11:53:28+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/13', 'format': 'Portable Network Graphics', 'version': '1.2', 'mime': 'image/png', 'class': 'Image (Raster)', 'basis': 'extension match png; byte match at [[0 16] [2962 4] [676202 12]]', 'warning': ''}]}]}
 >>> pygfried.identify_many(["example.png", "README.md"], workers=2)
-{'siegfried': '1.11.6', ...}
+{'siegfried': '1.11.8', ...}
 >>> pygfried.identify_dir("samples", recursive=True, workers=2)
-{'siegfried': '1.11.6', ...}
+{'siegfried': '1.11.8', ...}
 ```
 
-The module-level functions always use Siegfried's embedded `default.sig`. Use a
-`Scanner` when you need another signature database:
+### Custom scanners
+
+The module-level functions use Siegfried's embedded `default.sig`. To select
+another complete Siegfried signature database, create a `Scanner` with its
+path:
 
 ```python
 import pygfried
 
+scanner = pygfried.Scanner(signature="/usr/share/siegfried/custom.sig")
+scanner.identify("example.png")
+scanner.identify_many(["example.png", "README.md"], workers=2)
+scanner.identify_dir("samples", recursive=True, workers=2)
+```
+
+External databases are validated and loaded into memory when the scanner is
+constructed, so changing or deleting the file afterward does not affect that
+scanner.
+
+As a convenience, a scanner can instead select a bundled signature profile by
+name:
+
+```python
 scanner = pygfried.Scanner(profile="archivematica")
 scanner.identify("disk-image.ad1")
 # 'archivematica-fmt/2'
-
-result = scanner.identify("disk-image.ad1", detailed=True)
-assert result["signature"] == "archivematica.sig"
 ```
 
 Available bundled profiles are:
@@ -58,17 +72,10 @@ The Archivematica database is copied from the exact Siegfried module version
 used to compile pygfried. It is embedded in the extension, so it does not need
 to be installed separately.
 
-To use another complete Siegfried signature database, pass its path:
-
-```python
-scanner = pygfried.Scanner(signature="/usr/share/siegfried/custom.sig")
-```
-
-`profile` and `signature` are keyword-only and mutually exclusive. External
-databases are validated and loaded into memory when the scanner is constructed;
-changing or deleting the file afterward does not change that scanner. The
-read-only `scanner.profile` and `scanner.signature` properties report the
-selected source.
+`profile` and `signature` are keyword-only and mutually exclusive. The
+read-only `scanner.profile` property reports the bundled profile, or `None`
+for an external database. The read-only `scanner.signature` property reports
+the database's filename without its directory path.
 
 ### Batch and directory scans
 
@@ -80,16 +87,16 @@ same detailed result shape as `identify(..., detailed=True)`.
 >>> from pathlib import Path
 >>> paths = [str(path) for path in Path("samples").rglob("*.png")]
 >>> pygfried.identify_many(paths, workers=4)
-{'siegfried': '1.11.6', ...}
+{'siegfried': '1.11.8', ...}
 >>> pygfried.identify_dir("samples", recursive=True, workers=4)
-{'siegfried': '1.11.6', ...}
+{'siegfried': '1.11.8', ...}
 ```
 
-The `workers` argument controls Go-side concurrency. The default is `1`, which
-is the most conservative setting. For directories or large path lists, higher
-values can be much faster because pygfried avoids repeated Python-to-Go calls
-and identifies multiple files in parallel. A good starting point is the number
-of CPU cores available to your process, then measure with your own files.
+Batch and directory scans avoid repeated Python-to-Go calls. The `workers`
+argument controls Go-side concurrency and defaults to `1`. Higher values allow
+multiple files to be identified in parallel. To tune performance, start with
+the number of CPU cores available to your process, then measure with your own
+files.
 
 By default `identify_dir` skips symlinks. Use `follow_symlinks=True` to
 identify file symlinks and descend symlinked directories; directory cycles are
@@ -97,20 +104,29 @@ skipped, and repeated links to the same directory are scanned once.
 
 ### Concurrency
 
-A `Scanner` is safe to reuse across threads. Each scanner owns an independent,
-immutable Siegfried engine, while each `identify_many` or `identify_dir` call
-controls its own Go-side concurrency with `workers`. There is no process-wide
-worker limit beyond the per-call range of 1 to 1024.
+Both the module-level functions and `Scanner` methods are safe to call from
+multiple threads. The module-level API shares one immutable default scanner;
+each custom scanner owns an independent, immutable Siegfried engine.
 
-Create scanners after a process forks rather than attempting to serialize or
-transfer them between processes.
+The extension holds Python's GIL during identification, so Python threads do
+not run scans in parallel. Use `workers` for parallel file identification
+within a batch.
+
+Each `identify_many` or `identify_dir` call controls its own Go-side concurrency
+with `workers`, whether it is called on the module or on a scanner. There is no
+process-wide worker limit beyond the per-call range of 1 to 1024.
+
+For process-based parallelism, use the `spawn` start method explicitly
+(`multiprocessing.get_context("spawn")`). Import pygfried and create any custom
+scanners inside each worker process. Do not pass scanner instances between
+processes. Other start methods have not been verified.
 
 ## Limitations
 
 ### Go libraries can clash
 
 This project uses Go's `-buildmode=c-shared` to provide its Python extension.
-Loading multiple Go-based shared libraries in the same process is [unsupported]
+Loading multiple Go-based shared libraries in the same process has [known issues]
 and may result in panics or crashes due to conflicts between separate Go runtimes.
 
 This limitation should only affect you if you're using pygfried together with
@@ -126,4 +142,4 @@ and signatures are provided by siegfried. We gratefully acknowledge the work of
 the siegfried project and its contributors.
 
 [siegfried]: https://www.itforarchivists.com/siegfried
-[unsupported]: https://github.com/golang/go/issues/65050
+[known issues]: https://github.com/golang/go/issues/65050
