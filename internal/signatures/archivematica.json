@@ -1,6 +1,6 @@
 {
   "module": "github.com/richardlehane/siegfried",
-  "version": "v1.11.6",
+  "version": "v1.11.8",
   "source": "cmd/roy/data/archivematica.sig",
-  "sha256": "ee7d2603b9c64c9015ff88068d340eec8dfb0243fda4314fd18d42c4a32d1f70"
+  "sha256": "c67e663f57a941d57e0e2f8dbf8f73a26939c1f35ab6f54786dd6b0869b60d46"
 }
