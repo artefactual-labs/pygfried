@@ -21,15 +21,15 @@ $ pip install pygfried
 $ python -q
 >>> import pygfried
 >>> pygfried.version()
-'1.11.8'
+'1.11.9'
 >>> pygfried.identify("example.png")
 'fmt/13'
 >>> pygfried.identify("example.png", detailed=True)
-{'siegfried': '1.11.8', 'scandate': '2026-09-23T18:18:29+02:00', 'signature': 'default.sig', 'created': '2026-09-15T19:45:35+10:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V125.xml; container-signature-20260119.xml'}], 'files': [{'filename': 'example.png', 'filesize': 676214, 'modified': '2025-06-13T11:53:28+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/13', 'format': 'Portable Network Graphics', 'version': '1.2', 'mime': 'image/png', 'class': 'Image (Raster)', 'basis': 'extension match png; byte match at [[0 16] [2962 4] [676202 12]]', 'warning': ''}]}]}
+{'siegfried': '1.11.9', 'scandate': '2026-09-30T17:35:59+02:00', 'signature': 'default.sig', 'created': '2026-09-27T12:04:02+10:00', 'identifiers': [{'name': 'pronom', 'details': 'DROID_SignatureFile_V125.xml; container-signature-20260119.xml'}], 'files': [{'filename': 'example.png', 'filesize': 676214, 'modified': '2025-06-13T11:53:28+02:00', 'errors': '', 'matches': [{'ns': 'pronom', 'id': 'fmt/13', 'format': 'Portable Network Graphics', 'version': '1.2', 'mime': 'image/png', 'class': 'Image (Raster)', 'basis': 'extension match png; byte match at [[0 16] [2962 4] [676202 12]]', 'warning': ''}]}]}
 >>> pygfried.identify_many(["example.png", "README.md"], workers=2)
-{'siegfried': '1.11.8', ...}
+{'siegfried': '1.11.9', ...}
 >>> pygfried.identify_dir("samples", recursive=True, workers=2)
-{'siegfried': '1.11.8', ...}
+{'siegfried': '1.11.9', ...}
 ```
 
 ### Custom scanners
@@ -87,9 +87,9 @@ same detailed result shape as `identify(..., detailed=True)`.
 >>> from pathlib import Path
 >>> paths = [str(path) for path in Path("samples").rglob("*.png")]
 >>> pygfried.identify_many(paths, workers=4)
-{'siegfried': '1.11.8', ...}
+{'siegfried': '1.11.9', ...}
 >>> pygfried.identify_dir("samples", recursive=True, workers=4)
-{'siegfried': '1.11.8', ...}
+{'siegfried': '1.11.9', ...}
 ```
 
 Batch and directory scans avoid repeated Python-to-Go calls. The `workers`

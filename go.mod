@@ -3,7 +3,7 @@ module github.com/artefactual-labs/pygfried
 go 1.26.5
 
 require (
-	github.com/richardlehane/siegfried v1.11.8
+	github.com/richardlehane/siegfried v1.11.9
 	golang.org/x/sync v0.23.0
 	gotest.tools/v3 v3.5.2
 )
@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/richardlehane/characterize v1.0.0 // indirect
 	github.com/richardlehane/match v1.0.5 // indirect
-	github.com/richardlehane/mscfb v1.0.8 // indirect
+	github.com/richardlehane/mscfb v1.0.9 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/richardlehane/xmldetect v1.0.2 // indirect
 	github.com/ross-spencer/spargo v0.4.1 // indirect
