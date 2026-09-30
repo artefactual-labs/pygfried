@@ -146,9 +146,7 @@ func TestScannerSupportsConcurrentUse(t *testing.T) {
 	errors := make(chan error, goroutines)
 
 	for range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range repetitions {
 				result, err := scanner.Identify(path)
 				if err != nil {
@@ -161,7 +159,7 @@ func TestScannerSupportsConcurrentUse(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

@@ -1,6 +1,6 @@
 module github.com/artefactual-labs/pygfried
 
-go 1.26.5
+go 1.27.1
 
 require (
 	github.com/richardlehane/siegfried v1.11.9

@@ -49,6 +49,12 @@ Tests in Go:
 go test -race .
 ```
 
+Check the Go library and signature tooling for modernizations:
+
+```bash
+go fix -diff . ./internal/...
+```
+
 Build:
 
 ```bash

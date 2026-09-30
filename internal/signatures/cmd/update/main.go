@@ -127,8 +127,7 @@ func downloadModule(repoRoot string) (module, error) {
 	cmd.Dir = repoRoot
 	output, err := cmd.Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return module{}, fmt.Errorf("download module: %s", exitErr.Stderr)
 		}
 		return module{}, fmt.Errorf("download module: %w", err)

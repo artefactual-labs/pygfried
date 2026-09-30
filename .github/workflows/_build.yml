@@ -66,6 +66,8 @@ jobs:
         run: go run ./internal/signatures/cmd/update -check
       - name: Run Go tests with the race detector
         run: go test -race .
+      - name: Check Go modernization
+        run: go fix -diff . ./internal/...
 
   sdist:
     name: Build sdist
