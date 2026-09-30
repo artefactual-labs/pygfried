@@ -4,12 +4,12 @@ github.com/richardlehane/characterize v1.0.0 h1:2MMnKFqYd+hsKpQrPkc5JjbcIzVBIfvS
 github.com/richardlehane/characterize v1.0.0/go.mod h1:9mhxzxtWkXoLQpkg+gt7ioK6//+3hrsv3VHkbj8kbuQ=
 github.com/richardlehane/match v1.0.5 h1:+tuXp28xaIPsvKbhHyuivce9qMEfE8nP9d0wSxJef9o=
 github.com/richardlehane/match v1.0.5/go.mod h1:Vz0T28BYeZrU9h54iHnyjDfhVlKvn7XB7smnVripJME=
-github.com/richardlehane/mscfb v1.0.8 h1:UXdg61fxF69/X9yMYuRHAWSrGXIul/UAPivAsUXMme8=
-github.com/richardlehane/mscfb v1.0.8/go.mod h1:pe0+IUIc0AHh0+teNzBlJCtSyZdFOGgV4ZK9bsoV+Jo=
+github.com/richardlehane/mscfb v1.0.9 h1:8xdd9auUvXbFoCw3L9h1spnQHZgjNsSX+ek46J6A9tE=
+github.com/richardlehane/mscfb v1.0.9/go.mod h1:pe0+IUIc0AHh0+teNzBlJCtSyZdFOGgV4ZK9bsoV+Jo=
 github.com/richardlehane/msoleps v1.0.6 h1:9BvkpjvD+iUBalUY4esMwv6uBkfOip/Lzvd93jvR9gg=
 github.com/richardlehane/msoleps v1.0.6/go.mod h1:BWev5JBpU9Ko2WAgmZEuiz4/u3ZYTKbjLycmwiWUfWg=
-github.com/richardlehane/siegfried v1.11.8 h1:F2fDHwIOzSLG5QZ+DpmyK0LUZHFx48oydwgLno1PQBA=
-github.com/richardlehane/siegfried v1.11.8/go.mod h1:BBV33ZOu6wVp5W6VaPeJF9AW9K3GrrTMRKeUA4VYET8=
+github.com/richardlehane/siegfried v1.11.9 h1:TXKvqZ+XPCOWhRmNA0yXoJDELXJZA7bvBp/M9DhrLHk=
+github.com/richardlehane/siegfried v1.11.9/go.mod h1:oVllUOxbGuR0L5HZVOzym8cbMDaTjt3oJKpWiFw/UIs=
 github.com/richardlehane/xmldetect v1.0.2 h1:/3ooFuJwtgpMMe14/7m8a/JIvECMx6SpsPcDRiNyR8o=
 github.com/richardlehane/xmldetect v1.0.2/go.mod h1:Zp1lhTLRJa2p2QKA4jOruVQYc0NFQDO0YUz3k/k6JcE=
 github.com/ross-spencer/spargo v0.4.1 h1:+a570tI+az8j/s0+06mntNqwsJ7DXuq7PESUIXlKie8=
