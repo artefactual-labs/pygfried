@@ -51,6 +51,7 @@ PyObject* Pygfried_Py_RETURN_NONE() {
 
 /* Exception types. */
 PyObject* Pygfried_GoError;
+PyObject* Pygfried_EmptySourceError;
 
 /* JSON loading function used by Go. */
 PyObject* Pygfried_json_loads(PyObject* json_str) {
@@ -485,6 +486,22 @@ static PyObject* _setup_module(PyObject* module) {
         }
         if (PyModule_AddObject(module, "GoError", Pygfried_GoError) < 0) {
             Py_DECREF(Pygfried_GoError);
+            Py_DECREF(module);
+            return NULL;
+        }
+
+        Pygfried_EmptySourceError = PyErr_NewExceptionWithDoc(
+            "pygfried.EmptySourceError",
+            "Exception raised when identifying an empty file without detailed results.",
+            Pygfried_GoError,
+            NULL
+        );
+        if (!Pygfried_EmptySourceError) {
+            Py_DECREF(module);
+            return NULL;
+        }
+        if (PyModule_AddObject(module, "EmptySourceError", Pygfried_EmptySourceError) < 0) {
+            Py_DECREF(Pygfried_EmptySourceError);
             Py_DECREF(module);
             return NULL;
         }

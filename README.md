@@ -32,6 +32,15 @@ $ python -q
 {'siegfried': '1.11.9', ...}
 ```
 
+When identifying an empty file, `identify(path)` raises
+`pygfried.EmptySourceError`, a subclass of `pygfried.GoError` and `OSError`.
+This also applies to `Scanner.identify(path)`. Existing handlers for `GoError`
+continue to catch this exception.
+
+With `detailed=True`, or when using `identify_many` or `identify_dir`, empty
+files are reported in the results with `errors: "empty source"` and any
+extension-based matches. Other files in the scan are still identified.
+
 ### Custom scanners
 
 The module-level functions use Siegfried's embedded `default.sig`. To select

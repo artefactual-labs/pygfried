@@ -9,16 +9,19 @@ package main
 // extern unsigned long long Pygfried_ScannerHandle(PyObject*);
 // extern PyObject* Pygfried_Py_RETURN_NONE();
 // extern PyObject* Pygfried_GoError;
+// extern PyObject* Pygfried_EmptySourceError;
 // extern PyObject* Pygfried_json_loads(PyObject*);
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"runtime/cgo"
 	"strings"
 	"unsafe"
 
 	"github.com/artefactual-labs/pygfried"
+	"github.com/richardlehane/siegfried"
 )
 
 func raise(err error) *C.PyObject {
@@ -28,6 +31,9 @@ func raise(err error) *C.PyObject {
 
 func setError(err error) {
 	tp := C.Pygfried_GoError
+	if errors.Is(err, siegfried.ErrEmpty) {
+		tp = C.Pygfried_EmptySourceError
+	}
 	cstr := C.CString(err.Error())
 	C.PyErr_SetString(tp, cstr)
 	C.free(unsafe.Pointer(cstr))

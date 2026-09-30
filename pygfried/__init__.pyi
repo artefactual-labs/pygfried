@@ -6,6 +6,9 @@ from typing import overload
 class GoError(OSError):
     """Exception raised when Go code encounters an error."""
 
+class EmptySourceError(GoError):
+    """Exception raised when identifying an empty file without detailed results."""
+
 SimpleIdentifyResult = Literal["UNKNOWN"] | str | None
 
 class Match(TypedDict):

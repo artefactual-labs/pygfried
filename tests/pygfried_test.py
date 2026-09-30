@@ -23,6 +23,61 @@ def test_identify():
     assert result == "fmt/938"
 
 
+@pytest.fixture(params=["module", "default", "archivematica"])
+def identify_api(request):
+    if request.param == "module":
+        return pygfried
+    return pygfried.Scanner(profile=request.param)
+
+
+@pytest.mark.parametrize("filename", ["empty", "empty.txt"])
+def test_identify_empty_source_error(identify_api, tmp_path, filename):
+    path = tmp_path / filename
+    path.touch()
+
+    with pytest.raises(pygfried.GoError, match="^empty source$") as exc:
+        identify_api.identify(str(path))
+
+    assert type(exc.value) is pygfried.EmptySourceError
+    assert isinstance(exc.value, OSError)
+
+
+def test_identify_missing_file_uses_go_error(identify_api, tmp_path):
+    with pytest.raises(pygfried.GoError) as exc:
+        identify_api.identify(str(tmp_path / "missing.txt"))
+
+    assert type(exc.value) is pygfried.GoError
+
+
+@pytest.mark.parametrize("mode", ["detailed", "batch", "directory"])
+def test_empty_source_preserves_detailed_results(identify_api, tmp_path, mode):
+    empty = tmp_path / "empty.txt"
+    empty.touch()
+    normal = tmp_path / "normal.txt"
+    normal.write_text("A nonempty text file.\n")
+
+    if mode == "detailed":
+        result = identify_api.identify(str(empty), detailed=True)
+    elif mode == "batch":
+        result = identify_api.identify_many([str(empty), str(normal)], workers=2)
+    else:
+        result = identify_api.identify_dir(str(tmp_path), workers=2)
+
+    files = {file["filename"]: file for file in result["files"]}
+    empty_result = files[str(empty)]
+    assert empty_result["filesize"] == 0
+    assert empty_result["errors"] == "empty source"
+    assert empty_result["matches"][0]["id"] == "x-fmt/111"
+    assert empty_result["matches"][0]["basis"] == "extension match txt"
+    assert empty_result["matches"][0]["warning"] == "match on extension only"
+    if mode == "detailed":
+        assert len(files) == 1
+    else:
+        assert len(files) == 2
+        assert files[str(normal)]["errors"] == ""
+        assert files[str(normal)]["matches"][0]["id"] == "x-fmt/111"
+
+
 def test_identify_detailed(siegfried_version):
     result = pygfried.identify(str(conftest_path), detailed=True)
 
