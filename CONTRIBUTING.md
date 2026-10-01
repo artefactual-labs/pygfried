@@ -186,3 +186,26 @@ Notes:
 
 The workflow builds and tests the release artifacts, publishes them to PyPI, and
 only then creates the matching `vX.Y.Z` git tag and GitHub release.
+
+Release notes list every commit since the highest earlier stable `vX.Y.Z` tag
+reachable from the release commit, including changes pushed directly to `main`.
+Prerelease tags and tags outside that commit's history are ignored. If there is
+no earlier stable tag, the notes include the complete history up to that commit.
+Each entry contains the commit subject and a link to that commit under
+`What's Changed`, followed by a full changelog link. Backfilled descriptions
+use this same generator and format rather than separately written summaries.
+
+Preview the notes locally after fetching tags:
+
+```bash
+git fetch origin --tags
+python3 .github/scripts/generate-release-notes.py vX.Y.Z HEAD
+```
+
+To generate notes for an existing release, pass its tag as both arguments:
+
+```bash
+python3 .github/scripts/generate-release-notes.py vX.Y.Z vX.Y.Z
+```
+
+The workflow leaves existing release descriptions untouched when rerun.
