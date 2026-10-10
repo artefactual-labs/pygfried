@@ -12,21 +12,20 @@ on:
         required: false
         default: ""
         type: string
-      upload_artifacts:
-        description: Upload built distributions as workflow artifacts.
-        required: false
-        default: false
-        type: boolean
 
 env:
   # Fail if uv.lock would need to change.
   UV_LOCKED: "1"
-  # Use the Python provided by actions/setup-python from PATH.
-  UV_SYSTEM_PYTHON: "1"
+  # Provision host interpreters with uv instead of using runner installations.
+  UV_MANAGED_PYTHON: "1"
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   lint:
-    name: Lint and format checks
+    name: Lint, format, and type checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,13 +38,15 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        run: uv python install
       - name: Sync dev dependencies
         run: uv sync --only-dev --no-install-project
       - name: Run checks
         run: |
           uv run --no-sync ruff check .
           uv run --no-sync ruff format --check .
+          uv run --no-sync ty check --python-version 3.11
+          uv run --no-sync ty check --python-version 3.15
 
   go_test:
     name: Go race and signature checks
@@ -88,11 +89,10 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        run: uv python install
       - name: Sync dev dependencies
         run: uv sync --only-dev --no-install-project
       - name: Build sdist
-        shell: bash
         run: |
           if [[ -n "${PRETEND_VERSION}" ]]; then
             export SETUPTOOLS_SCM_PRETEND_VERSION="${PRETEND_VERSION}"
@@ -101,11 +101,72 @@ jobs:
       - name: Check sdist
         run: uv run --no-sync python -m twine check --strict dist/*.tar.gz
       - name: Upload sdist artifact
-        if: inputs.upload_artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-sdist
           path: dist/*.tar.gz
+
+  source_compat:
+    name: Build and test ${{ matrix.name }} sdist (py3.15)
+    runs-on: ${{ matrix.runner }}
+    needs: sdist
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+            macosx_deployment_target: ""
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+            macosx_deployment_target: ""
+          - name: macos-arm64
+            runner: macos-14
+            macosx_deployment_target: "13.0"
+          - name: windows-x86_64
+            runner: windows-latest
+            macosx_deployment_target: ""
+    env:
+      UV_PYTHON: "3.15"
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Download sdist artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-sdist
+          path: dist
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Set up Python
+        run: uv python install 3.11 3.15
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Sync dev dependencies
+        run: uv sync --only-dev --no-install-project
+      - name: Build wheel from sdist
+        run: uv build --wheel dist/*.tar.gz
+      - name: Check distributions
+        run: uv run --no-sync python -m twine check --strict dist/*
+      - name: Test wheel installation
+        run: |
+          uv pip install --python .venv dist/*.whl
+          uv run --no-sync python -m pytest
+      - name: Test source-built wheel on minimum Python
+        run: |
+          uv sync --only-dev --no-install-project --python 3.11
+          uv pip install --python .venv dist/*.whl
+          uv run --no-sync --python 3.11 python -m pytest
+      - name: Smoke test wheel with uvx
+        run: ./.github/scripts/smoke-install.sh dist/*.whl 3.15
 
   build:
     name: Build ${{ matrix.name }} (py${{ matrix.python-version }})
@@ -122,37 +183,38 @@ jobs:
           - name: linux-x86_64
             platform: linux
             runner: ubuntu-24.04
-            python-version: "3.10"
+            python-version: "3.11"
             manylinux_image: quay.io/pypa/manylinux2014_x86_64:latest
             go_tarball: linux-amd64
-            artifact_name: python-wheel-linux-x86_64-py3.10
+            artifact_name: python-wheel-linux-x86_64-py3.11
             macosx_deployment_target: ""
           - name: linux-aarch64
             platform: linux
             runner: ubuntu-24.04-arm
-            python-version: "3.10"
+            python-version: "3.11"
             manylinux_image: quay.io/pypa/manylinux2014_aarch64:latest
             go_tarball: linux-arm64
-            artifact_name: python-wheel-linux-aarch64-py3.10
+            artifact_name: python-wheel-linux-aarch64-py3.11
             macosx_deployment_target: ""
           - name: macos-arm64
             platform: macos
             runner: macos-14
-            python-version: "3.10"
+            python-version: "3.11"
             manylinux_image: ""
             go_tarball: ""
-            artifact_name: python-wheel-macos-arm64-py3.10
-            macosx_deployment_target: "11.0"
+            artifact_name: python-wheel-macos-arm64-py3.11
+            macosx_deployment_target: "13.0"
           - name: windows-x86_64
             platform: windows
             runner: windows-latest
-            python-version: "3.10"
+            python-version: "3.11"
             manylinux_image: ""
             go_tarball: ""
-            artifact_name: python-wheel-windows-x86_64-py3.10
+            artifact_name: python-wheel-windows-x86_64-py3.11
             macosx_deployment_target: ""
     env:
       PRETEND_VERSION: ${{ inputs.package_version }}
+      UV_PYTHON: ${{ matrix.python-version }}
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
     steps:
       - name: Check out source code
@@ -163,9 +225,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ matrix.python-version }}
+        run: uv python install
       # Linux installs Go inside the manylinux container; macOS and Windows
       # build on the host runner and need Go provisioned here.
       - name: Set up Go
@@ -177,7 +237,6 @@ jobs:
         run: uv sync --only-dev --no-install-project
       - name: Build wheel (Linux)
         if: matrix.platform == 'linux'
-        shell: bash
         run: |
           rm -rf dist
           mkdir -p dist
@@ -197,13 +256,12 @@ jobs:
               cd /tmp
               curl --silent --location "https://go.dev/dl/go'"${GO_VERSION}"'.${{ matrix.go_tarball }}.tar.gz" | tar -xz
               export PATH="/tmp/go/bin:$PATH" HOME=/tmp GOCACHE=/tmp/go-cache
-              /opt/python/cp310-cp310/bin/pip wheel --no-deps --wheel-dir /tmp /tmp/src
+              /opt/python/cp311-cp311/bin/pip wheel --no-deps --wheel-dir /tmp /tmp/src
               auditwheel repair /tmp/*.whl --wheel-dir /dist
             '
           uv run --no-sync python -m twine check --strict dist/*.whl
       - name: Build wheel (macOS/Windows)
         if: matrix.platform != 'linux'
-        shell: bash
         run: |
           if [[ -n "${PRETEND_VERSION}" ]]; then
             export SETUPTOOLS_SCM_PRETEND_VERSION="${PRETEND_VERSION}"
@@ -211,40 +269,21 @@ jobs:
           # Use the matrix interpreter for the isolated build environment.
           uv build --wheel --python "${{ matrix.python-version }}"
           uv run --no-sync python -m twine check --strict dist/*.whl
-      - name: Test wheel installation (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
+      - name: Test wheel installation
         run: |
-          $wheels = Get-ChildItem dist/*.whl
-          python -m venv test_env
-          .\\test_env\\Scripts\\Activate.ps1
-          python -m pip install pytest
-          python -m pip install $wheels[0].FullName
-          python -m pytest
-          deactivate
-      - name: Test wheel installation (macOS/Linux)
-        if: matrix.platform != 'windows'
-        shell: bash
-        run: |
-          python -m venv test_env
-          source test_env/bin/activate
-          python -m pip install pytest
-          python -m pip install dist/*.whl
-          python -m pytest
-          deactivate
+          uv pip install --python .venv dist/*.whl
+          uv run --no-sync python -m pytest
       - name: Smoke test wheel with uvx
-        shell: bash
         run: ./.github/scripts/smoke-install.sh dist/*.whl "${{ matrix.python-version }}"
       - name: Upload package artifacts
-        if: inputs.upload_artifacts || matrix.platform == 'windows'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/*.whl
 
-  windows_abi3_compat:
-    name: Test Windows abi3 wheel (py${{ matrix.python-version }})
-    runs-on: windows-latest
+  abi3_compat:
+    name: Test ${{ matrix.target.name }} abi3 wheel (py${{ matrix.python-version }})
+    runs-on: ${{ matrix.target.runner }}
     needs: build
     permissions:
       contents: read
@@ -252,37 +291,45 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.10"
-          - "3.11"
           - "3.12"
           - "3.13"
           - "3.14"
+          - "3.15"
+        target:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+          - name: macos-arm64
+            runner: macos-14
+          - name: windows-x86_64
+            runner: windows-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - name: Check out source code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
-      - name: Download Windows wheel artifact
+      - name: Download wheel artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: python-wheel-windows-x86_64-py3.10
+          name: python-wheel-${{ matrix.target.name }}-py3.11
           path: dist
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ matrix.python-version }}
+        run: uv python install
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      - name: Sync dev dependencies
+        run: uv sync --only-dev --no-install-project
       - name: Test wheel installation
-        shell: pwsh
         run: |
-          $wheel = Get-ChildItem dist/*.whl | Select-Object -First 1
-          python -m venv test_env
-          .\\test_env\\Scripts\\Activate.ps1
-          python -m pip install pytest
-          python -m pip install $wheel.FullName
-          python -m pytest
-          deactivate
+          uv pip install --python .venv dist/*.whl
+          uv run --no-sync python -m pytest
+      - name: Smoke test wheel with uvx
+        run: ./.github/scripts/smoke-install.sh dist/*.whl "${{ matrix.python-version }}"

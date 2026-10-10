@@ -145,7 +145,7 @@ def test_identify_many_rejects_bad_workers():
 
 def test_identify_many_rejects_non_string_paths():
     with pytest.raises(pygfried.GoError, match="paths must contain only strings"):
-        pygfried.identify_many([conftest_path])
+        pygfried.identify_many([conftest_path])  # ty: ignore[invalid-argument-type]
 
 
 def test_identify_many_rejects_null_bytes():
@@ -297,14 +297,14 @@ def test_scanner_profile_properties_are_read_only():
     scanner = pygfried.Scanner()
 
     with pytest.raises(AttributeError):
-        scanner.profile = "archivematica"
+        scanner.profile = "archivematica"  # ty: ignore[invalid-assignment]
     with pytest.raises(AttributeError):
-        scanner.signature = "custom.sig"
+        scanner.signature = "custom.sig"  # ty: ignore[invalid-assignment]
 
 
 def test_scanner_rejects_positional_profile():
     with pytest.raises(TypeError, match="takes no positional arguments"):
-        pygfried.Scanner("archivematica")
+        pygfried.Scanner("archivematica")  # ty: ignore[too-many-positional-arguments]
 
 
 def test_scanner_rejects_conflicting_sources():
@@ -320,7 +320,7 @@ def test_scanner_rejects_conflicting_sources():
 
 def test_scanner_rejects_unknown_profile():
     with pytest.raises(ValueError, match='unknown profile "unknown"'):
-        pygfried.Scanner(profile="unknown")
+        pygfried.Scanner(profile="unknown")  # ty: ignore[invalid-argument-type]
 
 
 def test_scanner_rejects_empty_signature():

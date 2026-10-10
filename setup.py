@@ -4,8 +4,10 @@ import shlex
 import shutil
 import subprocess
 import sys
+from importlib.machinery import EXTENSION_SUFFIXES
 from pathlib import Path
 
+from setuptools import Command
 from setuptools import Extension
 from setuptools import setup
 from setuptools.command.build_ext import build_ext as _build_ext
@@ -63,16 +65,26 @@ def platform_ldflags() -> str:
 
 
 class build_ext(_build_ext):
+    def get_ext_filename(self, fullname: str) -> str:
+        filename = super().get_ext_filename(fullname)
+        # Python 3.15 lists platform-specific abi3 suffixes first. Older
+        # interpreters only recognize the plain suffix promised by our wheels.
+        for suffix in EXTENSION_SUFFIXES:
+            if suffix.startswith(".abi3-") and filename.endswith(suffix):
+                return filename.removesuffix(suffix) + ".abi3.so"
+        return filename
+
     def build_extension(self, ext: Extension) -> None:
-        go_sources = [source for source in ext.sources if source.endswith(".go")]
+        sources = [os.fspath(source) for source in ext.sources]
+        go_sources = [source for source in sources if source.endswith(".go")]
         if not go_sources:
             super().build_extension(ext)
             return
 
-        if len(ext.sources) != 1 or len(go_sources) != 1:
+        if len(sources) != 1 or len(go_sources) != 1:
             raise OSError(
                 f"Error building extension `{ext.name}`: sources must be a "
-                f"single file in the `main` package.\nReceived: {ext.sources!r}",
+                f"single file in the `main` package.\nReceived: {sources!r}",
             )
 
         if not shutil.which("go"):
@@ -116,6 +128,8 @@ class build_ext(_build_ext):
         )
         subprocess.run(cmd, cwd=main_file.parent, env=env, check=True)
 
+
+cmdclass: dict[str, type[Command] | type[_build_ext]] = {}
 
 if platform.python_implementation() == "CPython":
     try:

@@ -5,8 +5,9 @@
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Go](https://go.dev/dl/)
 
-Recent versions are fine. uv and Go can provision or enforce the versions
-required by this repo.
+uv and Go can provision or enforce the versions required by this repo. CI
+installs the latest uv release and provisions its Python interpreters with uv.
+Development dependency versions are recorded in `uv.lock`.
 
 ## Setup
 
@@ -23,10 +24,10 @@ uv sync --no-install-project
 ```
 
 That matters in this repo because installing the project builds the Go-backed
-extension. After changing Go sources or dependencies, rebuild the extension
-with `uv sync --reinstall-package pygfried` before running the Python tests.
-Note that `uv build` only refreshes artifacts under `build/` and `dist/`; it
-does not refresh the in-place extension used by `uv run pytest`.
+extension. After changing Go sources or dependencies, rebuild the extension with
+`uv sync --reinstall-package pygfried` before running the Python tests. Note
+that `uv build` only refreshes artifacts under `build/` and `dist/`; it does not
+refresh the in-place extension used by `uv run pytest`.
 
 ## Common commands
 
@@ -36,6 +37,18 @@ Lint:
 uv run ruff check .
 uv run ruff format --check .
 ```
+
+Check types against the minimum and newest supported Python versions:
+
+```bash
+uv run ty check --python-version 3.11
+uv run ty check --python-version 3.15
+```
+
+These checks cover the public stubs, Python tests, build script, and release
+scripts, with platform-specific branches enabled for all supported systems.
+Tests that deliberately violate the API to check runtime errors use narrowly
+scoped `ty: ignore` comments for the expected diagnostics.
 
 Tests in Python:
 
@@ -72,15 +85,15 @@ Smoke test an installed package or built wheel the way a user would:
 ```bash
 ./.github/scripts/smoke-install.sh
 ./.github/scripts/smoke-install.sh dist/pygfried-*.whl
-./.github/scripts/smoke-install.sh dist/pygfried-*.whl 3.14
+./.github/scripts/smoke-install.sh dist/pygfried-*.whl 3.15
 ```
 
 The smoke test defaults to the interpreter version in `.python-version`,
 installs `pygfried` via `uvx`, runs `identify("README.md", detailed=True)`,
 prints the result, and asserts a few stable fields. This is most useful as a
 quick pre-release or post-release sanity check in addition to the normal test
-suite. Pass an explicit Python version when you need to test a wheel that is
-specific to a Python minor version.
+suite. Pass an explicit Python version to check the same stable ABI wheel on
+another supported interpreter.
 
 ## Dependency management
 
@@ -95,10 +108,20 @@ and the files that lock or exercise those versions together.
 - [`uv.lock`](./uv.lock) records the resolved Python dependencies for this repo.
 - Development dependencies live in [`pyproject.toml`](./pyproject.toml) and are
   locked in [`uv.lock`](./uv.lock).
-- When changing Python support, update `.python-version`,
-  [`pyproject.toml`](./pyproject.toml), [`uv.lock`](./uv.lock), and the Python
-  build matrix in [`.github/workflows/_build.yml`](./.github/workflows/_build.yml)
-  together.
+- When changing the minimum supported Python version, update `.python-version`,
+  `requires-python`, Ruff's `target-version`, ty's minimum version check, and
+  the wheel build matrix together. The minimum also sets the extension's limited
+  API and stable ABI wheel tag.
+- When adding a newer supported interpreter, add its classifier and
+  compatibility coverage in
+  [`.github/workflows/_build.yml`](./.github/workflows/_build.yml), and verify
+  that [`uv.lock`](./uv.lock) installs on that interpreter. Keep the existing
+  minimum unless support for older interpreters is being dropped.
+- CI builds wheels on the minimum interpreter and tests those wheels on every
+  supported version and platform. It also builds wheels from the sdist on Python
+  3.15 for every platform and tests each wheel on both 3.11 and 3.15 to exercise
+  the current interpreter's headers and build dependencies while preserving
+  older interpreter imports.
 
 ### Go
 
@@ -178,10 +201,14 @@ Inputs:
 
 Notes:
 
-- Do not include the `v` prefix in `version`. For example, use `0.13.0`, not `v0.13.0`.
-- The package published to PyPI uses the exact `version` value, such as `0.13.0`.
-- The workflow creates the git tag and GitHub release as `vX.Y.Z`, such as `v0.13.0`.
-- `gh workflow run --ref main` selects the branch that provides the workflow definition.
+- Do not include the `v` prefix in `version`. For example, use `0.13.0`, not
+  `v0.13.0`.
+- The package published to PyPI uses the exact `version` value, such as
+  `0.13.0`.
+- The workflow creates the git tag and GitHub release as `vX.Y.Z`, such as
+  `v0.13.0`.
+- `gh workflow run --ref main` selects the branch that provides the workflow
+  definition.
 - `-f ref=main` selects the branch, tag, or commit to release.
 
 The workflow builds and tests the release artifacts, publishes them to PyPI, and
@@ -192,8 +219,8 @@ reachable from the release commit, including changes pushed directly to `main`.
 Prerelease tags and tags outside that commit's history are ignored. If there is
 no earlier stable tag, the notes include the complete history up to that commit.
 Each entry contains the commit subject and a link to that commit under
-`What's Changed`, followed by a full changelog link. Backfilled descriptions
-use this same generator and format rather than separately written summaries.
+`What's Changed`, followed by a full changelog link. Backfilled descriptions use
+this same generator and format rather than separately written summaries.
 
 Preview the notes locally after fetching tags:
 
