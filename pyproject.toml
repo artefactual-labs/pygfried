@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 name = "pygfried"
 description = "Siegfried as a Python extension"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Artefactual Systems Inc.", email = "info@artefactual.com" },
 ]
@@ -19,11 +19,11 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dynamic = ["version"]
@@ -41,6 +41,8 @@ dev = [
     "pytest",
     "ruff",
     "twine",
+    "ty",
+    "types-setuptools",
 ]
 
 [tool.setuptools]
@@ -52,10 +54,16 @@ pygfried = ["py.typed", "__init__.pyi"]
 [tool.setuptools_scm]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["B", "C4", "E", "F", "I", "UP", "W"]
 
 [tool.ruff.lint.isort]
 force-single-line = true
+
+[tool.ty.environment]
+python-platform = "all"
+
+[tool.ty.src]
+include = ["pygfried", "tests", "setup.py", ".github/scripts"]

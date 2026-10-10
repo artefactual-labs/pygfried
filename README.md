@@ -14,6 +14,14 @@ without any changes to the underlying detection engine.
 
 No animals were harmed in the making of this extension.
 
+## Python support
+
+Pygfried supports standard CPython 3.11 through 3.15. Its wheels use Python's
+stable ABI, so the same platform wheel works across these interpreter versions.
+Free-threaded CPython builds are not currently supported.
+
+macOS wheels require macOS 13 (Ventura) or later.
+
 ## Usage
 
 ```
@@ -44,8 +52,7 @@ extension-based matches. Other files in the scan are still identified.
 ### Custom scanners
 
 The module-level functions use Siegfried's embedded `default.sig`. To select
-another complete Siegfried signature database, create a `Scanner` with its
-path:
+another complete Siegfried signature database, create a `Scanner` with its path:
 
 ```python
 import pygfried
@@ -81,10 +88,10 @@ The Archivematica database is copied from the exact Siegfried module version
 used to compile pygfried. It is embedded in the extension, so it does not need
 to be installed separately.
 
-`profile` and `signature` are keyword-only and mutually exclusive. The
-read-only `scanner.profile` property reports the bundled profile, or `None`
-for an external database. The read-only `scanner.signature` property reports
-the database's filename without its directory path.
+`profile` and `signature` are keyword-only and mutually exclusive. The read-only
+`scanner.profile` property reports the bundled profile, or `None` for an
+external database. The read-only `scanner.signature` property reports the
+database's filename without its directory path.
 
 ### Batch and directory scans
 
@@ -103,13 +110,12 @@ same detailed result shape as `identify(..., detailed=True)`.
 
 Batch and directory scans avoid repeated Python-to-Go calls. The `workers`
 argument controls Go-side concurrency and defaults to `1`. Higher values allow
-multiple files to be identified in parallel. To tune performance, start with
-the number of CPU cores available to your process, then measure with your own
-files.
+multiple files to be identified in parallel. To tune performance, start with the
+number of CPU cores available to your process, then measure with your own files.
 
-By default `identify_dir` skips symlinks. Use `follow_symlinks=True` to
-identify file symlinks and descend symlinked directories; directory cycles are
-skipped, and repeated links to the same directory are scanned once.
+By default `identify_dir` skips symlinks. Use `follow_symlinks=True` to identify
+file symlinks and descend symlinked directories; directory cycles are skipped,
+and repeated links to the same directory are scanned once.
 
 ### Concurrency
 
@@ -117,9 +123,9 @@ Both the module-level functions and `Scanner` methods are safe to call from
 multiple threads. The module-level API shares one immutable default scanner;
 each custom scanner owns an independent, immutable Siegfried engine.
 
-The extension holds Python's GIL during identification, so Python threads do
-not run scans in parallel. Use `workers` for parallel file identification
-within a batch.
+The extension holds Python's GIL during identification, so Python threads do not
+run scans in parallel. Use `workers` for parallel file identification within a
+batch.
 
 Each `identify_many` or `identify_dir` call controls its own Go-side concurrency
 with `workers`, whether it is called on the module or on a scanner. There is no
@@ -135,8 +141,9 @@ processes. Other start methods have not been verified.
 ### Go libraries can clash
 
 This project uses Go's `-buildmode=c-shared` to provide its Python extension.
-Loading multiple Go-based shared libraries in the same process has [known issues]
-and may result in panics or crashes due to conflicts between separate Go runtimes.
+Loading multiple Go-based shared libraries in the same process has
+[known issues] and may result in panics or crashes due to conflicts between
+separate Go runtimes.
 
 This limitation should only affect you if you're using pygfried together with
 another Python library that also uses a Go extension (built with the same
@@ -150,5 +157,5 @@ under the Apache License, Version 2.0. All core file format identification logic
 and signatures are provided by siegfried. We gratefully acknowledge the work of
 the siegfried project and its contributors.
 
-[siegfried]: https://www.itforarchivists.com/siegfried
 [known issues]: https://github.com/golang/go/issues/65050
+[siegfried]: https://www.itforarchivists.com/siegfried

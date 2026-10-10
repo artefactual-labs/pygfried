@@ -47,7 +47,6 @@ jobs:
     with:
       ref: ${{ needs.validate.outputs.release_sha }}
       package_version: ${{ needs.validate.outputs.package_version }}
-      upload_artifacts: true
 
   publish:
     name: Publish to PyPI
