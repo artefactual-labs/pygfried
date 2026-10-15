@@ -13,24 +13,28 @@ on:
         default: main
         type: string
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   validate:
+    timeout-minutes: 10
     name: Validate release inputs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
       package_version: ${{ steps.validate.outputs.package_version }}
       tag_name: ${{ steps.validate.outputs.tag_name }}
       release_sha: ${{ steps.validate.outputs.release_sha }}
-      tag_exists: ${{ steps.validate.outputs.tag_exists }}
-      pypi_exists: ${{ steps.validate.outputs.pypi_exists }}
     steps:
       - name: Check out source code
         uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
+          persist-credentials: false
       - name: Validate release inputs
         id: validate
         shell: bash
@@ -41,29 +45,33 @@ jobs:
         run: bash ./.github/scripts/validate-release-inputs.sh
 
   build:
+    permissions:
+      contents: read
     name: Build release artifacts
     needs: validate
-    uses: ./.github/workflows/_build.yml
+    uses: $/.github/workflows/_build.yml
     with:
       ref: ${{ needs.validate.outputs.release_sha }}
       package_version: ${{ needs.validate.outputs.package_version }}
 
   publish:
+    timeout-minutes: 15
     name: Publish to PyPI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - validate
       - build
     environment: release
     permissions:
-      contents: write
-      id-token: write
+      contents: write # Create the GitHub release and tag.
+      id-token: write # Sign attestations and authenticate to PyPI with OIDC.
     steps:
       - name: Check out source code
         uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.validate.outputs.release_sha }}
           fetch-depth: 0
+          persist-credentials: false
       - name: Download sdist artifact
         uses: actions/download-artifact@v8.0.2
         with:

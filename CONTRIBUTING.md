@@ -173,6 +173,19 @@ concurrent use.
 
 ### GitHub Actions
 
+Check workflows and Dependabot configuration with [jactionlint]:
+
+```bash
+jactionlint --strict-exit
+gh actions-lock --verify
+```
+
+`.github/jactionlint.yaml` selects the pedantic profile and disables
+`unpinned-uses`, since `gh actions-lock` verifies the pins in
+`.github/workflows/actions.lock`. CI also fails on warnings and informational
+findings. After adding or updating an action, run `gh actions-lock` and include
+the generated lockfile changes.
+
 - [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs CI for `main`
   and pull requests.
 - [`.github/workflows/_build.yml`](./.github/workflows/_build.yml) defines the
@@ -236,3 +249,5 @@ python3 .github/scripts/generate-release-notes.py vX.Y.Z vX.Y.Z
 ```
 
 The workflow leaves existing release descriptions untouched when rerun.
+
+[jactionlint]: https://github.com/jdx/jactionlint
