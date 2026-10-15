@@ -11,16 +11,19 @@ class EmptySourceError(GoError):
 
 SimpleIdentifyResult = Literal["UNKNOWN"] | str | None
 
-class Match(TypedDict):
-    ns: str
-    id: str
-    format: str
-    version: str
-    mime: str
-    basis: str
-    warning: str
-
-Match.__annotations__["class"] = str
+Match = TypedDict(
+    "Match",
+    {
+        "ns": str,
+        "id": str,
+        "format": str,
+        "version": str,
+        "mime": str,
+        "class": str,
+        "basis": str,
+        "warning": str,
+    },
+)
 
 class File(TypedDict):
     filename: str
