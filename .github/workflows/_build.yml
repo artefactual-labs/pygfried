@@ -53,6 +53,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      siegfried_version: ${{ steps.siegfried.outputs.version }}
     steps:
       - name: Check out source code
         uses: actions/checkout@v7.0.1
@@ -65,6 +67,11 @@ jobs:
           go-version-file: go.mod
       - name: Check the bundled Archivematica signature
         run: go run ./internal/signatures/cmd/update -check
+      - name: Read Siegfried dependency version
+        id: siegfried
+        run: |
+          version="$(go list -m -f '{{.Version}}' github.com/richardlehane/siegfried)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
       - name: Run Go tests with the race detector
         run: go test -race .
       - name: Check Go modernization
@@ -284,7 +291,9 @@ jobs:
   abi3_compat:
     name: Test ${{ matrix.target.name }} abi3 wheel (py${{ matrix.python-version }})
     runs-on: ${{ matrix.target.runner }}
-    needs: build
+    needs:
+      - build
+      - go_test
     permissions:
       contents: read
     strategy:
@@ -306,6 +315,7 @@ jobs:
             runner: windows-latest
     env:
       UV_PYTHON: ${{ matrix.python-version }}
+      PYGFRIED_TEST_SIEGFRIED_VERSION: ${{ needs.go_test.outputs.siegfried_version }}
     steps:
       - name: Check out source code
         uses: actions/checkout@v7.0.1
@@ -321,10 +331,6 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.0
       - name: Set up Python
         run: uv python install
-      - name: Set up Go
-        uses: actions/setup-go@v7.0.0
-        with:
-          go-version-file: go.mod
       - name: Sync dev dependencies
         run: uv sync --only-dev --no-install-project
       - name: Test wheel installation
