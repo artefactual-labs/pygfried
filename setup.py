@@ -126,7 +126,14 @@ class build_ext(_build_ext):
             ),
             level=2,
         )
-        subprocess.run(cmd, cwd=main_file.parent, env=env, check=True)
+        try:
+            subprocess.run(cmd, cwd=main_file.parent, env=env, check=True)
+        except subprocess.CalledProcessError as exc:
+            exc.add_note(
+                f"Building extension {ext.name!r} with Python "
+                f"{platform.python_version()} ({sys.executable})."
+            )
+            raise
 
 
 cmdclass: dict[str, type[Command] | type[_build_ext]] = {}
