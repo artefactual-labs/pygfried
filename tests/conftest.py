@@ -1,12 +1,16 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def siegfried_version():
+    if version := os.environ.get("PYGFRIED_TEST_SIEGFRIED_VERSION"):
+        return version.removeprefix("v")
+
     modname = "github.com/richardlehane/siegfried"
     root_dir = Path(__file__).parent
     result = subprocess.run(
