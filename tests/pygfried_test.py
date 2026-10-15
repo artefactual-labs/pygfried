@@ -82,14 +82,14 @@ def test_identify_detailed(siegfried_version):
     result = pygfried.identify(str(conftest_path), detailed=True)
 
     assert result["siegfried"] == siegfried_version
-    parse_iso_date(result["scandate"])
+    datetime.fromisoformat(result["scandate"])
     assert result["signature"] == "default.sig"
-    parse_iso_date(result["created"])
+    datetime.fromisoformat(result["created"])
     assert len(result["identifiers"]) > 0
     assert len(result["files"]) == 1
 
     finfo = dict(result["files"][0])
-    parse_iso_date(str(finfo.pop("modified")))
+    datetime.fromisoformat(str(finfo.pop("modified")))
     assert finfo == {
         "filename": str(conftest_path),
         "filesize": conftest_path.stat().st_size,
@@ -452,31 +452,3 @@ def test_scanner_releases_type_reference():
 
     final_refcount = sys.getrefcount(pygfried.Scanner)
     assert final_refcount == initial_refcount
-
-
-def parse_iso_date(date_string):
-    """Parse ISO date string with compatibility for Python 3.9-3.11"""
-    try:
-        return datetime.fromisoformat(date_string)
-    except ValueError:
-        if date_string.endswith("Z"):
-            date_string = date_string[:-1] + "+00:00"
-        try:
-            return datetime.fromisoformat(date_string)
-        except ValueError:
-            if "." in date_string:
-                parts = date_string.split(".")
-                if len(parts) == 2:
-                    microsecs = parts[1]
-                    if "+" in microsecs:
-                        microsecs, tz = microsecs.split("+", 1)
-                        microsecs = microsecs[:6].ljust(6, "0")
-                        date_string = f"{parts[0]}.{microsecs}+{tz}"
-                    elif microsecs.endswith("+00:00"):
-                        microsecs = microsecs[:-6]
-                        microsecs = microsecs[:6].ljust(6, "0")
-                        date_string = f"{parts[0]}.{microsecs}+00:00"
-                    else:
-                        microsecs = microsecs[:6].ljust(6, "0")
-                        date_string = f"{parts[0]}.{microsecs}"
-            return datetime.fromisoformat(date_string)
