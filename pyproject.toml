@@ -44,6 +44,9 @@ dev = [
     "ty",
     "types-setuptools",
 ]
+publish = [
+    "pypi-attestations==0.0.30",
+]
 
 [tool.setuptools]
 packages = ["pygfried"]
