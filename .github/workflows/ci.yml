@@ -12,15 +12,22 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   verify-actions-lock:
+    timeout-minutes: 10
     name: Verify action lockfile
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Install actions-lock
         env:
           GH_TOKEN: ${{ github.token }}
@@ -30,7 +37,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh actions-lock --verify
 
+  lint-workflows:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check workflows and Dependabot configuration
+        uses: jdx/jactionlint@v2.1.0
+        with:
+          strict-exit: "true"
+
   build:
-    uses: ./.github/workflows/_build.yml
+    permissions:
+      contents: read
+    uses: $/.github/workflows/_build.yml
     with:
       ref: ${{ github.ref }}
