@@ -20,7 +20,7 @@ jobs:
   verify-actions-lock:
     timeout-minutes: 10
     name: Verify action lockfile
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
@@ -39,7 +39,7 @@ jobs:
 
   lint-workflows:
     name: Lint GitHub Actions
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read
