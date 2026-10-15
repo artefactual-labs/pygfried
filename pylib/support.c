@@ -367,8 +367,11 @@ static const char identify_doc[] =
     "identify(path, detailed=False)\n"
     "--\n"
     "\n"
-    "Identify one file. Return the first format identifier by default, or a\n"
-    "detailed siegfried-style result dictionary when detailed is true.";
+    "Identify one file. By default, return the first format identifier as a\n"
+    "string, such as 'fmt/13', or 'UNKNOWN' for an unidentified format. Return\n"
+    "None if there are no identifiers or the first identifier is empty.\n"
+    "\n"
+    "When detailed is true, return a detailed siegfried-style result dictionary.";
 
 static const char identify_many_doc[] =
     "identify_many(paths, *, workers=1)\n"

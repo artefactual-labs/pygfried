@@ -9,7 +9,7 @@ class GoError(OSError):
 class EmptySourceError(GoError):
     """Exception raised when identifying an empty file without detailed results."""
 
-SimpleIdentifyResult = Literal["UNKNOWN"] | str | None
+SimpleIdentifyResult = str | None
 
 Match = TypedDict(
     "Match",
