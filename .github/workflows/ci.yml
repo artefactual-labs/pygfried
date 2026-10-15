@@ -9,6 +9,23 @@ on:
       - main
 
 jobs:
+  verify-actions-lock:
+    name: Verify action lockfile
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+      - name: Install actions-lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install github/gh-actions-lock --pin v0.2.0
+      - name: Verify locked dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh actions-lock --verify
+
   build:
     uses: ./.github/workflows/_build.yml
     with:
