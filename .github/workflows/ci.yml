@@ -49,7 +49,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Check workflows and Dependabot configuration
-        uses: jdx/jactionlint@v2.1.0
+        uses: jdx/jactionlint@v2.2.0
         with:
           strict-exit: "true"
 
