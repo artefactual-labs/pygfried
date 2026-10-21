@@ -11,7 +11,7 @@ workflows:
         - 'astral-sh/setup-uv@v10.3.0'
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
-        - 'jdx/jactionlint@v2.1.0'
+        - 'jdx/jactionlint@v2.2.0'
     '.github/workflows/release.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/download-artifact@v8.0.2'
@@ -47,9 +47,9 @@ dependencies:
         commit: 'sha1-2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2'
         owner_id: 9919
         repo_id: 259445878
-    'jdx/jactionlint@v2.1.0':
-        ref: 'v2.1.0'
-        commit: 'sha1-a0bb9f012b6b5760c17c9ccd040001d08002a10e'
+    'jdx/jactionlint@v2.2.0':
+        ref: 'v2.2.0'
+        commit: 'sha1-1027f0a131ab98bc7e191d995bfa15dbed5bbf8f'
         owner_id: 216188
         repo_id: 1404951382
         uses:
