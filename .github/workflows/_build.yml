@@ -268,7 +268,7 @@ jobs:
           if [[ -n "${PRETEND_VERSION}" ]]; then
             DOCKER_ENV+=(--env "SETUPTOOLS_SCM_PRETEND_VERSION=${PRETEND_VERSION}")
           fi
-          docker run --rm \
+          docker run --rm --pull always \
             --volume "${PWD}:/src:ro" \
             --volume "${PWD}/dist:/dist:rw" \
             --user "$(id -u):$(id -g)" \
@@ -279,7 +279,13 @@ jobs:
             bash -o pipefail -euxc '
               cp -a /src/. /tmp/src
               cd /tmp
-              curl --silent --location "https://go.dev/dl/go${GO_VERSION}.${GO_TARBALL}.tar.gz" | tar -xz
+              archive="go${GO_VERSION}.${GO_TARBALL}.tar.gz"
+              awk -v archive="$archive" '\''$2 == archive { print; found = 1 } END { if (!found) exit 1 }'\'' \
+                /src/.github/go-downloads.sha256 > go-download.sha256
+              curl --fail --silent --show-error --location --proto "=https" --proto-redir "=https" \
+                "https://go.dev/dl/${archive}" --output "$archive"
+              sha256sum --check --strict go-download.sha256
+              tar -xzf "$archive"
               export PATH="/tmp/go/bin:$PATH" HOME=/tmp GOCACHE=/tmp/go-cache
               /opt/python/cp311-cp311/bin/pip wheel --no-deps --wheel-dir /tmp /tmp/src
               auditwheel repair /tmp/*.whl --wheel-dir /dist
