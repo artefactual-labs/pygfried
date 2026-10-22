@@ -13,6 +13,8 @@ on:
         default: ""
         type: string
 
+permissions: {}
+
 env:
   # Fail if uv.lock would need to change.
   UV_LOCKED: "1"
@@ -118,6 +120,7 @@ jobs:
         with:
           name: python-sdist
           path: dist/*.tar.gz
+          if-no-files-found: error
 
   source_compat:
     timeout-minutes: 30
@@ -137,7 +140,7 @@ jobs:
             runner: ubuntu-26.04-arm
             macosx_deployment_target: ""
           - name: macos-arm64
-            runner: macos-14
+            runner: macos-15
             macosx_deployment_target: "13.0"
           - name: windows-x86_64
             runner: windows-2025
@@ -173,12 +176,12 @@ jobs:
         run: uv run --no-sync python -m twine check --strict dist/*
       - name: Test wheel installation
         run: |
-          uv pip install --python .venv dist/*.whl
+          uv pip install --exclude-newer "7 days" --python .venv dist/*.whl
           uv run --no-sync python -m pytest
       - name: Test source-built wheel on minimum Python
         run: |
           uv sync --only-dev --no-install-project --python 3.11
-          uv pip install --python .venv dist/*.whl
+          uv pip install --exclude-newer "7 days" --python .venv dist/*.whl
           uv run --no-sync --python 3.11 python -m pytest
       - name: Smoke test wheel with uvx
         run: ./.github/scripts/smoke-install.sh dist/*.whl 3.15
@@ -214,7 +217,7 @@ jobs:
             macosx_deployment_target: ""
           - name: macos-arm64
             platform: macos
-            runner: macos-14
+            runner: macos-15
             python-version: "3.11"
             manylinux_image: ""
             go_tarball: ""
@@ -293,7 +296,7 @@ jobs:
           uv run --no-sync python -m twine check --strict dist/*.whl
       - name: Test wheel installation
         run: |
-          uv pip install --python .venv dist/*.whl
+          uv pip install --exclude-newer "7 days" --python .venv dist/*.whl
           uv run --no-sync python -m pytest
       - name: Smoke test wheel with uvx
         run: ./.github/scripts/smoke-install.sh dist/*.whl "${UV_PYTHON}"
@@ -302,6 +305,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/*.whl
+          if-no-files-found: error
 
   # Test published wheels on an older Ubuntu runtime than the build hosts.
   abi3_compat:
@@ -327,7 +331,7 @@ jobs:
           - name: linux-aarch64
             runner: ubuntu-24.04-arm
           - name: macos-arm64
-            runner: macos-14
+            runner: macos-15
           - name: windows-x86_64
             runner: windows-2025
     env:
@@ -353,7 +357,7 @@ jobs:
         run: uv sync --only-dev --no-install-project
       - name: Test wheel installation
         run: |
-          uv pip install --python .venv dist/*.whl
+          uv pip install --exclude-newer "7 days" --python .venv dist/*.whl
           uv run --no-sync python -m pytest
       - name: Smoke test wheel with uvx
         run: ./.github/scripts/smoke-install.sh dist/*.whl "${UV_PYTHON}"

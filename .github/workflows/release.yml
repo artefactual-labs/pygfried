@@ -13,6 +13,13 @@ on:
         default: main
         type: string
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-caller
+  cancel-in-progress: false
+  queue: max
+
 defaults:
   run:
     shell: bash
