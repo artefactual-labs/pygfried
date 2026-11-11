@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/richardlehane/siegfried v1.11.9
-	golang.org/x/sync v0.24.0
+	golang.org/x/sync v0.25.0
 	gotest.tools/v3 v3.5.2
 )
 
